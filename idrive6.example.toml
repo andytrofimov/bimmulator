@@ -13,3 +13,14 @@ modules = ["head-unit", "6wb"]
 
 # Optional: 2 (default) or 1 for the slower single-core compatibility mode.
 # cpuCount = 2
+
+# Optional: integrate the head unit and optional 6WB in a local browser session.
+# Requires head-unit in modules; overrides native windows. No runtime downloads.
+# web = true
+# webPort = 8090
+
+# Advanced, explicit operator-prepared NBT inputs (NOT package-verified).
+# Both external paths are required together; source-pinned overlays still apply.
+# In this mode psdzdata is used only for 6wb and may be omitted for head-unit only.
+# preparedRoot = "/external/prepared-root"
+# bootImage = "/external/boot1.ifs"

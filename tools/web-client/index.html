@@ -5,15 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>BMW · VM</title>
   <link rel="stylesheet" href="/client.css">
+  <link rel="stylesheet" href="/settings.css">
 </head>
 <body>
   <header class="toolbar">
     <span class="brand">BMW <span>VM</span></span>
+    <div class="views" role="tablist" aria-label="Display">
+      <button id="view-idrive" role="tab" aria-selected="true" aria-controls="display-panel" tabindex="0" data-view="idrive">iDrive</button>
+      <button id="view-kombi" role="tab" aria-selected="false" aria-controls="display-panel" tabindex="-1" data-view="kombi">KOMBI</button>
+    </div>
     <span id="vnc-status" role="status">Connecting…</span>
+    <button id="settings-open" class="icon-button" aria-label="Settings" title="Settings">⚙</button>
   </header>
   <main>
     <div class="workspace">
-      <section id="display-panel" class="display" aria-label="iDrive display">
+      <section id="display-panel" class="display" role="tabpanel" aria-labelledby="view-idrive">
         <div id="viewport">
           <div id="screen" aria-label="iDrive display"></div>
           <span id="pointer" aria-hidden="true" hidden></span>
@@ -30,6 +36,8 @@
       <pre id="log" tabindex="0" aria-label="Raw serial log"></pre>
     </section>
   </main>
+  <dialog id="settings-dialog"></dialog>
   <script type="module" src="/client.js"></script>
+  <script type="module" src="/settings.js"></script>
 </body>
 </html>

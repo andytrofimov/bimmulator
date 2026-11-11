@@ -72,6 +72,9 @@ class LaunchConfigTests(unittest.TestCase):
                 self.assertEqual(env["IDRIVE_ANGLE_EGL_SERVER_BIN"], "/fixture/host-server")
                 self.assertEqual(env["IDRIVE_QEMU_CPUS"], "2")
                 self.assertEqual(command[1], "/project/tools/run-hmi-profile.py")
+                with patch.dict(os.environ, {"IDRIVE_ANGLE_SERVER": "", "IDRIVE_ANGLE_EGL_SERVER_BIN": "/fixture/direct-server"}):
+                    _, direct = launcher["head_unit_command"](Path("/project"), config, Path("/firmware"))
+                self.assertEqual(direct["IDRIVE_ANGLE_EGL_SERVER_BIN"], "/fixture/direct-server")
 
     def test_kombi_uses_sdl_for_either_native_gui_and_none_for_headless(self):
         for display, expected in (("cocoa", "sdl"), ("gtk", "sdl"), ("none", "none")):
@@ -90,7 +93,7 @@ class LaunchConfigTests(unittest.TestCase):
                     simulator = Mock()
                     with patch("tempfile.mkdtemp", return_value=str(run)), \
                             patch("subprocess.Popen", side_effect=[kombi, simulator]) as popen, \
-                            patch.dict(launcher["run_kombi_session"].__globals__, {"stop_process": Mock()}):
+                            patch.dict(launcher["run_kombi_session"].__globals__, {"stop_process": Mock(), "child_status": lambda process: process.poll()}):
                         status = launcher["run_kombi_session"](
                             Path("/project"), cache, {"display": display},
                             (Path("gss"), Path("config"), Path("graphics")), None,

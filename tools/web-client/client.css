@@ -10,7 +10,10 @@ button:focus-visible, pre:focus-visible { outline: 2px solid #79c7ff; outline-of
 .toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
 .brand { font-weight: 700; letter-spacing: .1em; white-space: nowrap; }
 .brand span { color: #929da9; font-weight: 400; }
+.views { display: flex; gap: 4px; }
+.views button[aria-selected="true"] { border-color: #79c7ff; background: #253a4a; }
 #vnc-status { color: #aab5c0; font-size: 12px; margin-left: auto; }
+.icon-button { font-size: 22px; line-height: 1; padding: 4px 10px; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 304px; gap: 16px; align-items: start; }
 .display { min-width: 0; }
 #viewport { position: relative; aspect-ratio: 8 / 3; overflow: hidden; background: #000; border: 1px solid #3d454e; border-radius: 4px; }

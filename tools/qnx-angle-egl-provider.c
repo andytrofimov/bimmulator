@@ -2708,6 +2708,77 @@ void glDepthMask(unsigned char flag)
         g_gl_error = GL_NO_ERROR;
 }
 
+/* Real stencil/blend state forwarding. Success must not clear a pending GL error. */
+static void gl_state_rpc(unsigned int opcode, unsigned int a, unsigned int b,
+                         unsigned int c, const unsigned char *payload,
+                         unsigned int payload_size)
+{
+    struct RpcResult reply;
+    if (g_current_context == EGL_NO_CONTEXT) {
+        if (g_gl_error == GL_NO_ERROR) g_gl_error = GL_INVALID_OPERATION;
+        return;
+    }
+    if (!rpc(opcode, a, b, c, payload, payload_size, &reply) &&
+        g_gl_error == GL_NO_ERROR)
+        g_gl_error = reply.error ? reply.error : GL_INVALID_OPERATION;
+}
+
+void glStencilFuncSeparate(unsigned int face, unsigned int function,
+                            int reference, unsigned int mask)
+{
+    unsigned char payload[4];
+    idrive_angle_egl_rpc_put_u32(payload, mask);
+    gl_state_rpc(IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_FUNC_SEPARATE, face, function,
+                 (unsigned int)reference, payload, sizeof(payload));
+}
+
+void glStencilMaskSeparate(unsigned int face, unsigned int mask)
+{
+    gl_state_rpc(IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_MASK_SEPARATE,
+                 face, mask, 0, 0, 0);
+}
+
+void glStencilOpSeparate(unsigned int face, unsigned int fail,
+                          unsigned int depth_fail, unsigned int depth_pass)
+{
+    unsigned char payload[4];
+    idrive_angle_egl_rpc_put_u32(payload, depth_pass);
+    gl_state_rpc(IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_OP_SEPARATE,
+                 face, fail, depth_fail, payload, sizeof(payload));
+}
+
+void glStencilFunc(unsigned int function, int reference, unsigned int mask)
+{
+    glStencilFuncSeparate(0x0408u, function, reference, mask);
+}
+
+void glStencilMask(unsigned int mask)
+{
+    glStencilMaskSeparate(0x0408u, mask);
+}
+
+void glStencilOp(unsigned int fail, unsigned int depth_fail, unsigned int depth_pass)
+{
+    glStencilOpSeparate(0x0408u, fail, depth_fail, depth_pass);
+}
+
+void glClearStencil(int value)
+{
+    gl_state_rpc(IDRIVE_ANGLE_EGL_RPC_GL_CLEAR_STENCIL,
+                 (unsigned int)value, 0, 0, 0, 0);
+}
+
+void glBlendEquationSeparate(unsigned int rgb, unsigned int alpha)
+{
+    gl_state_rpc(IDRIVE_ANGLE_EGL_RPC_GL_BLEND_EQUATION_SEPARATE,
+                 rgb, alpha, 0, 0, 0);
+}
+
+void glBlendEquation(unsigned int mode)
+{
+    glBlendEquationSeparate(mode, mode);
+}
+
 void glGetBooleanv(unsigned int pname, unsigned char *params)
 {
     struct RpcResult reply;

@@ -110,6 +110,26 @@ class BrowserTests(webtests.ClientFixture):
 
     def setUp(self):
         super().setUp()
+        self.stop()
+        self.kombi_listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.addCleanup(self.kombi_listener.close)
+        self.args.kombi_vnc_socket = self.root / 'kombi.sock'
+        self.kombi_listener.bind(str(self.args.kombi_vnc_socket))
+        self.kombi_listener.listen()
+        self.args.settings_file = self.root / 'pending.json'
+        from vm_lab_settings import DEFAULTS, SettingsStore
+        self.boot = DEFAULTS.copy()
+        self.args.boot_run_id = 'browser-fixture'
+        self.args.boot_settings_file = self.root / 'boot-settings-browser-fixture.json'
+        SettingsStore(self.args.boot_settings_file, self.root).save({'values': self.boot})
+        self.server = webtests.client.make_server(self.args)
+        self.server.handle_error = lambda request, address: self.server_errors.append(__import__('sys').exc_info()[1])
+        self.thread = threading.Thread(target=self.server.serve_forever)
+        self.thread.start()
+        self.origin = self.server.origin
+        self.token = self.request('/api/status')[1]['csrf']
+        self.kombi = RFBFixture(self.kombi_listener)
+        self.addCleanup(self.kombi.close)
         self.rfb = RFBFixture(self.backend)
         self.addCleanup(self.rfb.close)
         self.profile = self.root / 'chrome-profile'
@@ -180,6 +200,34 @@ class BrowserTests(webtests.ClientFixture):
         self.assertNotIn('exceptionDetails', result)
         return result['result'].get('value')
 
+    def test_tabs_readonly_and_boot_next_settings(self):
+        original = self.args.boot_settings_file.read_bytes()
+        self.evaluate("document.getElementById('view-kombi').click()")
+        self.until(lambda: self.kombi.connections >= 1)
+        self.until(lambda: self.evaluate("document.getElementById('vnc-status').textContent === 'Connected'"))
+        self.assertEqual(self.evaluate("document.querySelectorAll('[data-key]:disabled').length"), 14)
+        self.assertEqual(self.evaluate("document.querySelectorAll('canvas').length"), 1)
+        point = self.evaluate("(()=>{const r=document.querySelector('canvas').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
+        for kind in ('mouseMoved', 'mousePressed', 'mouseReleased'):
+            self.command('Input.dispatchMouseEvent', {'type': kind, 'button': 'left', 'clickCount': 1, **point})
+        self.assertFalse(self.kombi.pointer.wait(.2), 'KOMBI must be view-only')
+        self.evaluate("document.getElementById('settings-open').click()")
+        self.until(lambda: self.evaluate("document.querySelectorAll('.settings-values input').length === 5"))
+        self.assertEqual(self.evaluate("[...document.querySelectorAll('.settings-values input:disabled')].length"), 2)
+        self.assertEqual(self.evaluate("[...document.querySelectorAll('#settings-panel-coding tbody td:first-of-type')].map(n=>n.textContent)"), ['On','On','On'])
+        self.evaluate("document.querySelector('[aria-label=\"Developer menu: saved for next launch\"]').click()")
+        self.assertEqual(self.args.boot_settings_file.read_bytes(), original)
+        self.evaluate("[...document.querySelectorAll('#settings-dialog button')].find(n=>n.textContent==='Save for next launch').click()")
+        self.until(lambda: self.args.settings_file.is_file())
+        self.assertFalse(json.loads(self.args.settings_file.read_text())['values']['developer_menu'])
+        self.assertEqual(self.args.boot_settings_file.read_bytes(), original)
+        self.evaluate("[...document.querySelectorAll('#settings-dialog button')].find(n=>n.textContent==='Close').click(); document.getElementById('view-idrive').click()")
+        self.until(lambda: self.evaluate("!document.querySelector('[data-key=menu]').disabled"))
+        self.until(lambda: self.rfb.connections >= 2)
+        self.evaluate("document.getElementById('settings-open').click()")
+        self.until(lambda: self.evaluate("document.querySelector('[aria-label=\"Developer menu: saved for next launch\"]').checked === false"))
+        self.assertEqual(self.evaluate("document.querySelector('#settings-panel-coding tbody td').textContent"), 'On')
+
     def test_history_return_and_synthetic_persisted_resume(self):
         self.evaluate("window.__historySentinel = true")
         history = self.command('Page.getNavigationHistory', {})
@@ -233,13 +281,14 @@ class BrowserTests(webtests.ClientFixture):
         self.until(lambda: self.evaluate("document.querySelector('canvas')?.width === 1440"))
         self.until(lambda: self.evaluate("JSON.stringify([...document.querySelector('canvas').getContext('2d').getImageData(0,0,1,1).data]) === '[16,32,48,255]'"))
         self.assertEqual(self.evaluate("document.querySelectorAll('[data-key]').length"), 14)
-        self.assertFalse(self.evaluate("Boolean(document.querySelector('[role=tab],dialog,[src*=settings]'))"))
+        self.assertEqual(self.evaluate("document.querySelectorAll('[data-view]').length"), 2)
+        self.assertEqual(self.evaluate("document.querySelectorAll('.rotary').length"), 1)
         self.until(lambda: self.evaluate("document.getElementById('log').textContent.includes('<script>')"))
         self.assertFalse(self.evaluate("Boolean(document.querySelector('#log script'))"))
         for key, code in webtests.client.KEYS.items():
             self.evaluate(f"document.querySelector('[data-key={key}]').click()")
             self.assertEqual(self.sock.recv(8), bytes([code]))
-        for width, height in [(1440, 900), (1280, 720), (390, 844)]:
+        for width, height in [(1440, 900), (1366, 768), (1280, 720), (390, 844)]:
             self.command('Emulation.setDeviceMetricsOverride', {'width': width, 'height': height,
                 'deviceScaleFactor': 1, 'mobile': False})
             self.assertLessEqual(self.evaluate('document.documentElement.scrollWidth'), width)

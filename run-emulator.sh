@@ -35,7 +35,11 @@ HMI_BENCH_INPUT="${IDRIVE_HMI_BENCH_INPUT:-0}"
 HMI_RESOURCE_EN_US="${IDRIVE_HMI_RESOURCE_EN_US:-0}"
 HMI_CID_POINTER="${IDRIVE_HMI_CID_POINTER:-0}"
 HMI_CONTROLLER="${IDRIVE_HMI_CONTROLLER:-0}"
-HMI_CID_PORT=43567
+HMI_CID_PORT="${IDRIVE_HMI_CID_PORT:-43567}"
+if [[ ! "$HMI_CID_PORT" =~ ^[0-9]{1,5}$ ]] || (( 10#$HMI_CID_PORT < 1 || 10#$HMI_CID_PORT > 65535 )); then
+  echo "IDRIVE_HMI_CID_PORT must be in 1..65535." >&2
+  exit 2
+fi
 HMI_CODING_DEVELOPER_MENU="${IDRIVE_HMI_CODING_DEVELOPER_MENU:-0}"
 HMI_CODING_CAMERA_RVC="${IDRIVE_HMI_CODING_CAMERA_RVC:-0}"
 HMI_VARIANTREGISTRY_F32="${IDRIVE_HMI_VARIANTREGISTRY_F32:-0}"
@@ -78,6 +82,23 @@ if [[ -n "${IDRIVE_VNC:-}" ]]; then
     echo "IDRIVE_VNC must be 127.0.0.1:DISPLAY (0..59635), without options." >&2
     exit 1
   fi
+fi
+
+if [[ -n "${IDRIVE_VNC_SOCKET:-}" ]]; then
+  if [[ -n "${IDRIVE_VNC:-}" ]]; then
+    echo "Select IDRIVE_VNC or IDRIVE_VNC_SOCKET, not both." >&2
+    exit 2
+  fi
+  python3 - "$IDRIVE_VNC_SOCKET" <<'PY_SOCKET'
+import os, pathlib, stat, sys
+path = pathlib.Path(sys.argv[1])
+info = path.parent.lstat()
+if (not path.is_absolute() or len(os.fsencode(path)) >= 104 or ',' in str(path)
+        or path.parent.resolve() != path.parent or not stat.S_ISDIR(info.st_mode)
+        or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077
+        or path.exists() or path.is_symlink()):
+    sys.exit("IDRIVE_VNC_SOCKET must be a new socket in a fixed owned private directory (<104 UTF-8 bytes).")
+PY_SOCKET
 fi
 
 if [[ -z "${IDRIVE_ROOTFS_TREE:-}" && -d "$IDRIVE_CACHE_DIR/rootfs-x20511i" ]]; then
@@ -886,7 +907,7 @@ if [[ "$ANGLE_EGL_MAILBOX" == "1" ]]; then
   truncate -s 17M "$ANGLE_EGL_MAILBOX_FILE"
 fi
 if [[ "$HMI_CONTROLLER" == "1" ]]; then
-  HMI_CONTROLLER_SOCKET="$WORK_DIR/controller.sock"
+  HMI_CONTROLLER_SOCKET="${IDRIVE_HMI_CONTROLLER_SOCKET:-$WORK_DIR/controller.sock}"
   echo "HMI controller socket (available when the renderer is ready): $HMI_CONTROLLER_SOCKET"
 fi
 QEMU_DEBUG_LOG="${IDRIVE_QEMU_DEBUG_LOG:-$IDRIVE_CACHE_DIR/qemu-debug-${EMULATOR_PROFILE}.log}"
@@ -1443,6 +1464,9 @@ fi
 
 if [[ -n "${IDRIVE_VNC:-}" ]]; then
   QEMU_ARGS+=( -vnc "$IDRIVE_VNC" )
+fi
+if [[ -n "${IDRIVE_VNC_SOCKET:-}" ]]; then
+  QEMU_ARGS+=( -vnc "unix:$IDRIVE_VNC_SOCKET" )
 fi
 if [[ -n "${IDRIVE_DISPLAY:-}" ]]; then
   QEMU_ARGS+=( -display "$IDRIVE_DISPLAY" )

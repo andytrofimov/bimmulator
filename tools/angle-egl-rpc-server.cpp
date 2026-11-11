@@ -111,6 +111,10 @@ struct ClientState {
 };
 
 std::unordered_map<unsigned int, ClientState> g_clients;
+// EGL current state belongs to this single dispatch thread, not every RPC
+// client. Track the client that successfully bound it; a failed bind leaves
+// the previous owner intact. A deferred context destroy also keeps ownership.
+unsigned int g_current_context_client = 0;
 
 bool read_all(int fd, unsigned char *data, std::size_t size,
               std::chrono::steady_clock::time_point *first_byte_time = nullptr)
@@ -590,6 +594,11 @@ const char *opcode_name(unsigned int opcode)
     case IDRIVE_ANGLE_EGL_RPC_GL_GET_PROGRAM_INFO_LOG: return "GL_GET_PROGRAM_INFO_LOG";
     case IDRIVE_ANGLE_EGL_RPC_GL_DEPTH_FUNC: return "GL_DEPTH_FUNC";
     case IDRIVE_ANGLE_EGL_RPC_GL_DEPTH_MASK: return "GL_DEPTH_MASK";
+    case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_FUNC_SEPARATE: return "GL_STENCIL_FUNC_SEPARATE";
+    case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_MASK_SEPARATE: return "GL_STENCIL_MASK_SEPARATE";
+    case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_OP_SEPARATE: return "GL_STENCIL_OP_SEPARATE";
+    case IDRIVE_ANGLE_EGL_RPC_GL_CLEAR_STENCIL: return "GL_CLEAR_STENCIL";
+    case IDRIVE_ANGLE_EGL_RPC_GL_BLEND_EQUATION_SEPARATE: return "GL_BLEND_EQUATION_SEPARATE";
     case IDRIVE_ANGLE_EGL_RPC_GL_UNIFORM_FV: return "GL_UNIFORM_FV";
     case IDRIVE_ANGLE_EGL_RPC_GL_UNIFORM_MATRIX_FV: return "GL_UNIFORM_MATRIX_FV";
     default: return "UNKNOWN";
@@ -667,10 +676,13 @@ void append_u32(std::vector<unsigned char> &payload, unsigned int value)
     idrive_angle_egl_rpc_put_u32(payload.data() + old_size, value);
 }
 
-void destroy_client_objects(ClientState &client)
+void destroy_client_objects(unsigned int client_id, ClientState &client)
 {
-    if (eglGetCurrentContext() != EGL_NO_CONTEXT) {
-        (void)eglMakeCurrent(g_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (g_current_context_client == client_id &&
+        eglGetCurrentContext() != EGL_NO_CONTEXT &&
+        eglMakeCurrent(g_display, EGL_NO_SURFACE, EGL_NO_SURFACE,
+                       EGL_NO_CONTEXT) == EGL_TRUE) {
+        g_current_context_client = 0;
     }
     for (const auto &entry : client.contexts) {
         (void)eglDestroyContext(g_display, entry.second);
@@ -710,7 +722,7 @@ bool process_request(const unsigned char *request,
         return true;
 
     case IDRIVE_ANGLE_EGL_RPC_TERMINATE:
-        destroy_client_objects(client);
+        destroy_client_objects(client_id, client);
         g_clients.erase(client_id);
         return true;
 
@@ -935,6 +947,7 @@ bool process_request(const unsigned char *request,
             set_error(response, eglGetError());
             return false;
         }
+        g_current_context_client = context == EGL_NO_CONTEXT ? 0 : client_id;
         return true;
     }
 
@@ -1758,6 +1771,54 @@ bool process_request(const unsigned char *request,
             idrive_angle_egl_rpc_u32(payload.data()));
         glBlendFuncSeparate(static_cast<GLenum>(a), static_cast<GLenum>(b),
                             static_cast<GLenum>(c), dst_alpha);
+        const GLenum error = glGetError();
+        if (error != GL_NO_ERROR) {
+            set_error(response, static_cast<EGLint>(error));
+            return false;
+        }
+        return true;
+    }
+
+    case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_FUNC_SEPARATE:
+    case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_MASK_SEPARATE:
+    case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_OP_SEPARATE:
+    case IDRIVE_ANGLE_EGL_RPC_GL_CLEAR_STENCIL:
+    case IDRIVE_ANGLE_EGL_RPC_GL_BLEND_EQUATION_SEPARATE: {
+        if (g_current_context_client != client_id ||
+            eglGetCurrentContext() == EGL_NO_CONTEXT) {
+            set_error(response, kGlInvalidOperation);
+            return false;
+        }
+        const bool fourth_argument =
+            opcode == IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_FUNC_SEPARATE ||
+            opcode == IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_OP_SEPARATE;
+        if (payload.size() != (fourth_argument ? 4u : 0u) ||
+            (!fourth_argument && c) ||
+            (opcode == IDRIVE_ANGLE_EGL_RPC_GL_CLEAR_STENCIL && b)) {
+            set_error(response, kGlInvalidValue);
+            return false;
+        }
+        switch (opcode) {
+        case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_FUNC_SEPARATE:
+            glStencilFuncSeparate(static_cast<GLenum>(a), static_cast<GLenum>(b),
+                                  static_cast<GLint>(c),
+                                  idrive_angle_egl_rpc_u32(payload.data()));
+            break;
+        case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_MASK_SEPARATE:
+            glStencilMaskSeparate(static_cast<GLenum>(a), b);
+            break;
+        case IDRIVE_ANGLE_EGL_RPC_GL_STENCIL_OP_SEPARATE:
+            glStencilOpSeparate(static_cast<GLenum>(a), static_cast<GLenum>(b),
+                                static_cast<GLenum>(c),
+                                idrive_angle_egl_rpc_u32(payload.data()));
+            break;
+        case IDRIVE_ANGLE_EGL_RPC_GL_CLEAR_STENCIL:
+            glClearStencil(static_cast<GLint>(a));
+            break;
+        case IDRIVE_ANGLE_EGL_RPC_GL_BLEND_EQUATION_SEPARATE:
+            glBlendEquationSeparate(static_cast<GLenum>(a), static_cast<GLenum>(b));
+            break;
+        }
         const GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             set_error(response, static_cast<EGLint>(error));
@@ -3013,7 +3074,7 @@ int main(int argc, char **argv)
     if (eglGetCurrentContext() != EGL_NO_CONTEXT) {
         (void)eglMakeCurrent(g_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     }
-    for (auto &entry : g_clients) destroy_client_objects(entry.second);
+    for (auto &entry : g_clients) destroy_client_objects(entry.first, entry.second);
     if (g_display_initialized) (void)eglTerminate(g_display);
     if (g_listener >= 0) close(g_listener);
     if (g_guest_ram_fd >= 0) close(g_guest_ram_fd);

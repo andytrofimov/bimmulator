@@ -27,6 +27,16 @@ extern EGLContext eglGetCurrentContext(void);
 extern EGLDisplay eglGetCurrentDisplay(void);
 extern const unsigned char *glGetString(unsigned int);
 extern unsigned int glGetError(void);
+extern void glGetIntegerv(unsigned int, int *);
+extern void glStencilFuncSeparate(unsigned int, unsigned int, int, unsigned int);
+extern void glStencilMaskSeparate(unsigned int, unsigned int);
+extern void glStencilOpSeparate(unsigned int, unsigned int, unsigned int, unsigned int);
+extern void glStencilFunc(unsigned int, int, unsigned int);
+extern void glStencilMask(unsigned int);
+extern void glStencilOp(unsigned int, unsigned int, unsigned int);
+extern void glClearStencil(int);
+extern void glBlendEquationSeparate(unsigned int, unsigned int);
+extern void glBlendEquation(unsigned int);
 extern void glViewport(int, int, int, int);
 extern void glClearColor(float, float, float, float);
 extern void glClear(unsigned int);
@@ -105,12 +115,12 @@ void _start(void)
     puts(eglQueryString(display, EGL_VENDOR));
     puts(eglQueryString(display, EGL_VERSION));
 
-    const EGLint config_attributes[] = {
+    static const EGLint config_attributes[] = {
         EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
-        EGL_DEPTH_SIZE, 24, EGL_NONE
+        EGL_DEPTH_SIZE, 24, 0x3026 /* EGL_STENCIL_SIZE */, 8, EGL_NONE
     };
     if (!eglChooseConfig(display, config_attributes, &config, 1, &count) || count != 1)
         fail("ANGLE EGL provider smoke: eglChooseConfig failed");
@@ -118,10 +128,10 @@ void _start(void)
         fail("ANGLE EGL provider smoke: depth24 config missing");
     print_hex("EGL depth bits", (unsigned int)depth);
 
-    const EGLint surface_attributes[] = { EGL_WIDTH, 64, EGL_HEIGHT, 64, EGL_NONE };
+    static const EGLint surface_attributes[] = { EGL_WIDTH, 64, EGL_HEIGHT, 64, EGL_NONE };
     EGLSurface surface = eglCreatePbufferSurface(display, config, surface_attributes);
     if (!surface) fail("ANGLE EGL provider smoke: eglCreatePbufferSurface failed");
-    const EGLint context_attributes[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
+    static const EGLint context_attributes[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
     EGLContext context = eglCreateContext(display, config, (EGLContext)0, context_attributes);
     if (!context) fail("ANGLE EGL provider smoke: eglCreateContext failed");
     if (!eglMakeCurrent(display, surface, surface, context))
@@ -147,6 +157,37 @@ void _start(void)
             fail("ANGLE EGL provider smoke: QNX GLES table/version check failed");
     puts("QNX GLES GL_VERSION:");
     puts((const char *)version);
+    int actual_state = 0;
+    glStencilFuncSeparate(0x0404, 0x0201, 37, 0x5a);
+    glStencilFuncSeparate(0x0405, 0x0206, 12, 0xa5);
+    glStencilMaskSeparate(0x0404, 0x3c);
+    glStencilMaskSeparate(0x0405, 0xc3);
+    glStencilOpSeparate(0x0405, 0x1e00, 0x1e02, 0x1e01);
+    glClearStencil(3);
+    glBlendEquationSeparate(0x800a, 0x800b);
+    static const unsigned int state_names[] = {0x0b92,0x0b97,0x0b93,0x0b98,0x8800,
+                                       0x8ca3,0x8ca4,0x8ca5,0x8801,0x8802,0x8803,
+                                       0x0b91,0x8009,0x883d};
+    static const int state_values[] = {0x0201,37,0x5a,0x3c,0x0206,12,0xa5,0xc3,
+                               0x1e00,0x1e02,0x1e01,3,0x800a,0x800b};
+    for (unsigned int i=0; i<sizeof(state_names)/sizeof(state_names[0]); ++i) {
+        glGetIntegerv(state_names[i], &actual_state);
+        if (actual_state != state_values[i]) {
+            print_hex("GL state mismatch name",state_names[i]);
+            print_hex("GL state actual",(unsigned int)actual_state);
+            fail("ANGLE EGL provider smoke: real stencil/blend state mismatch");
+        }
+    }
+    if (glGetError() != GL_NO_ERROR) fail("ANGLE EGL provider smoke: stencil/blend error");
+    glStencilMaskSeparate(0xdead, 0xff);
+    glClearStencil(0); /* A successful state call must preserve the pending error. */
+    if (glGetError() != 0x0500) fail("ANGLE EGL provider smoke: invalid stencil face not rejected");
+    glStencilFunc(0x0207,0,0xffffffffu);
+    glStencilMask(0xffffffffu);
+    glStencilOp(0x1e00,0x1e00,0x1e00);
+    glBlendEquation(0x8006);
+    if (glGetError() != GL_NO_ERROR) fail("ANGLE EGL provider smoke: stencil aliases failed");
+    puts("ANGLE_EGL_PROVIDER_STENCIL_BLEND_OK real-state=14 invalid-enum=checked pending-error=preserved");
     glViewport(0, 0, 64, 64);
     glClearColor(0.2f, 0.6f, 0.9f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -171,6 +212,9 @@ void _start(void)
 
     if (!eglMakeCurrent(display, (EGLSurface)0, (EGLSurface)0, (EGLContext)0))
         fail("ANGLE EGL provider smoke: unbind failed");
+    glClearStencil(0);
+    if (glGetError() != 0x0502)
+        fail("ANGLE EGL provider smoke: state call without context not rejected");
     if (!eglDestroyContext(display, context)) fail("ANGLE EGL provider smoke: destroy context failed");
     if (!eglDestroySurface(display, surface)) fail("ANGLE EGL provider smoke: destroy surface failed");
     if (!eglTerminate(display)) fail("ANGLE EGL provider smoke: terminate failed");

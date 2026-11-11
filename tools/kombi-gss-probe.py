@@ -2,8 +2,12 @@
 """Trace BO03 GSS startup on Malta or the experimental Capricorn-M board."""
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
+import os
+import signal
+import stat
 from pathlib import Path
 import subprocess
 import tempfile
@@ -158,8 +162,68 @@ def measure_tachometer(process, ram, screenshot, seconds):
           f"longest gap {longest_gap * 1000:.0f} ms", flush=True)
 
 
+@contextmanager
+def owned_qemu(args, output, **options):
+    """Register custody before delivering a cancellation at the fork boundary."""
+    cancelled = []
+    def defer(signum, frame):
+        cancelled.append(signum)
+    handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGINT, signal.SIGTERM)}
+    process = None
+    try:
+        try:
+            for sig in handlers:
+                signal.signal(sig, defer)
+            process = subprocess.Popen(args, stderr=output, **options)
+        finally:
+            for sig, handler in handlers.items():
+                signal.signal(sig, handler)
+        if cancelled:
+            raise KeyboardInterrupt
+        yield process
+    finally:
+        # A second Ctrl-C/SIGTERM must not abandon the QEMU grandchild.
+        for sig in handlers:
+            signal.signal(sig, defer)
+        try:
+            if process is not None:
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                process.wait(timeout=2)
+                for stream in (process.stdin, process.stdout):
+                    if stream:
+                        stream.close()
+        finally:
+            for sig, handler in handlers.items():
+                signal.signal(sig, handler)
+
+
+def validate_vnc_socket(path):
+    path = Path(path)
+    info = path.parent.lstat()
+    if (not path.is_absolute() or len(os.fsencode(path)) >= 104 or "," in str(path)
+            or path.parent.resolve() != path.parent or not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) & 0o077
+            or path.exists() or path.is_symlink()):
+        raise ValueError("VNC requires a new socket in an owned private directory (<104 UTF-8 bytes)")
+    return path
+
+
+def interrupt_probe(_signum, _frame):
+    # Keep the Python custodian alive until its actual QEMU child has been reaped.
+    raise KeyboardInterrupt
+
+
 def run_probe(qemu, image, log, config=None, graphics_data=None, capture=None, *,
-              kss_replay=False, rpm_ram=None, display="none", benchmark=None, qmp_socket=None):
+              kss_replay=False, rpm_ram=None, display="none", benchmark=None, qmp_socket=None, vnc_socket=None):
+    if vnc_socket is not None:
+        validate_vnc_socket(vnc_socket)
+        if not (config and kss_replay and rpm_ram and display == "none"):
+            raise ValueError("UNIX cluster VNC requires live Capricorn-M KSS replay with display=none")
     with tempfile.TemporaryDirectory(prefix="idrive6-gss-") as directory:
         if benchmark:
             rpm_ram = Path(directory) / "benchmark.ram"
@@ -199,6 +263,8 @@ def run_probe(qemu, image, log, config=None, graphics_data=None, capture=None, *
                             "-filetype=obj", str(source), "-o", str(obj)], check=True)
             subprocess.run(["llvm-objcopy", "--dump-section", f".text={payload}", str(obj)], check=True)
             args += ["-device", f"loader,file={payload},addr=0x1000200,force-raw=on"]
+        if vnc_socket is not None:
+            args += ["-vnc", f"unix:{vnc_socket},display=cluster"]
         qmp = {}
         if qmp_socket:
             socket_path = str(qmp_socket).replace(",", ",,")
@@ -206,38 +272,29 @@ def run_probe(qemu, image, log, config=None, graphics_data=None, capture=None, *
         if capture or benchmark:
             args += ["-qmp", "stdio"]
             qmp = dict(stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
-        with log.open("xb") as output, subprocess.Popen(args, stderr=output, **qmp) as process:
-            try:
-                if qmp:
-                    qmp_command(process, "qmp_capabilities")
-                if benchmark:
-                    measure_tachometer(process, rpm_ram, Path(directory) / "cluster.ppm", benchmark)
-                    if capture:
-                        capture.mkdir()
-                        capture_displays(process, capture)
-                    return
-                if rpm_ram:
-                    print(f"Vehicle mailbox ready at {rpm_ram}", flush=True)
-                    try:
-                        if process.wait():
-                            raise RuntimeError(f"QEMU exited with code {process.returncode}; see {log}")
-                    except KeyboardInterrupt:
-                        pass
-                    return
-                deadline = time.monotonic() + (8 if kss_replay else 3)
-                while process.poll() is None and time.monotonic() < deadline and log.stat().st_size < 8 * 2**20:
-                    time.sleep(0.01)
+        with log.open("xb") as output, owned_qemu(args, output, **qmp) as process:
+            if qmp:
+                qmp_command(process, "qmp_capabilities")
+            if benchmark:
+                measure_tachometer(process, rpm_ram, Path(directory) / "cluster.ppm", benchmark)
                 if capture:
                     capture.mkdir()
                     capture_displays(process, capture)
-            finally:
-                if process.poll() is None:
-                    process.terminate()
-                    try:
-                        process.wait(timeout=2)
-                    except subprocess.TimeoutExpired:
-                        process.kill()
-                        process.wait()
+                return
+            if rpm_ram:
+                print(f"Vehicle mailbox ready at {rpm_ram}", flush=True)
+                try:
+                    if process.wait():
+                        raise RuntimeError(f"QEMU exited with code {process.returncode}; see {log}")
+                except KeyboardInterrupt:
+                    pass
+                return
+            deadline = time.monotonic() + (8 if kss_replay else 3)
+            while process.poll() is None and time.monotonic() < deadline and log.stat().st_size < 8 * 2**20:
+                time.sleep(0.01)
+            if capture:
+                capture.mkdir()
+                capture_displays(process, capture)
     trace = log.read_bytes()
     for name, address in MILESTONES.items():
         if f"0xffffffff{address:08x}:".encode() in trace:
@@ -266,6 +323,7 @@ def main():
     live.add_argument("--benchmark", type=float, metavar="SECONDS",
                       help="measure changed cluster frames during a headless RPM sweep")
     parser.add_argument("--display", default="none", help="QEMU display backend for --vehicle-ram")
+    parser.add_argument("--vnc-socket", type=Path, help="new private run-owned UNIX RFB socket for the cluster")
     parser.add_argument("--qmp-socket", type=Path, help="optional QEMU monitor socket for a live run")
     args = parser.parse_args()
     if bool(args.config) != bool(args.graphics_data):
@@ -279,6 +337,11 @@ def main():
     if (args.display != "none" or args.qmp_socket) and not args.vehicle_ram:
         parser.error("--display and --qmp-socket require --vehicle-ram")
     try:
+        if args.vnc_socket is not None:
+            validate_vnc_socket(args.vnc_socket)
+            if not (args.config and args.kss_replay and args.vehicle_ram and args.display == "none"):
+                raise ValueError("UNIX cluster VNC requires live Capricorn-M KSS replay with display=none")
+        signal.signal(signal.SIGTERM, interrupt_probe)
         if args.config:
             for path, expected in ((args.config, CONFIG.sha256), (args.graphics_data, GRAPHICS.sha256)):
                 with path.open("rb") as stream:
@@ -287,7 +350,7 @@ def main():
         capture = args.capture.resolve() if args.capture else None
         run_probe(args.qemu, args.gss.read_bytes(), args.log, args.config, args.graphics_data, capture,
                   kss_replay=args.kss_replay, rpm_ram=args.vehicle_ram, display=args.display,
-                  benchmark=args.benchmark, qmp_socket=args.qmp_socket)
+                  benchmark=args.benchmark, qmp_socket=args.qmp_socket, vnc_socket=args.vnc_socket)
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
         parser.exit(1, f"{error}\n")
 

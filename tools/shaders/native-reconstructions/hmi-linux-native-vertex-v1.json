@@ -1,0 +1,256 @@
+{
+  "schema": "idrive6-hmi-exact-vertex-map-v1",
+  "purpose": "Explicit Linux native reconstruction selection; baseline preserved. See docs/NATIVE_SHADER_MAPS.md for provenance and qualification limits.",
+  "selection_manifest_sha256": "f868ee0df193995595cb560b93be39f378d1e25bd911ee34653259daff8e9a30",
+  "selection_base_manifest_sha256": "a3cedca7ec8788616a2ebde13937d9ffe63e1004536f180b7bee26a046b70155",
+  "mappings": [
+    {
+      "asset_path": "common/shader/Rectangle_vertex.shd",
+      "source_path": "tools/shaders/native-reconstructions/Rectangle_vertex.glsl",
+      "basis": "previously ANGLE-compiled exact Rectangle reconstruction",
+      "source_essl_sha256": "c0310cfb74cb2fc444fadc591b562c46c72af44b2351b6af0e1d461b29984f41"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/panel/shaders/mat_list_edge_l1.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/0382ae187199c506.glsl",
+      "shader_sha256": "0382ae187199c5061655fd06a2c656413eed2717066256c814ff40d290ea51a1",
+      "source_essl_sha256": "19f2f03a9476bef11d3dab173d1de0dd12adccfe5902815016689eb1e1d25154",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_frame_inner.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/07d36c6663560def.glsl",
+      "shader_sha256": "07d36c6663560def374a837ade6853a077ad5d65422ade3bfd28faeec7a86703",
+      "source_essl_sha256": "c76c52dd106f1c97aab37db94256c21ceaa840924d346963eee7c17790987ed8",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_main_edge_glow2.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/0b18c1a830b59a75.glsl",
+      "shader_sha256": "0b18c1a830b59a75938ffbb3382bdaf39842da05b625b4e43521095929fe5561",
+      "source_essl_sha256": "ced3ea816fff9a097aacdd6b45827bae25a8a65dc6e99beb8ce8b7e589034736",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "common/shader/Text_ColorFading_vertex.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/114cd36df0bf7ecd.glsl",
+      "shader_sha256": "114cd36df0bf7ecdaf83574794c30ed68802357d8c35d43e2429ab1520412ef5",
+      "source_essl_sha256": "f6993dcc4373656c4c31099204d1f19cbdb241e716a576966aef32e94224a969",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_highlight.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/1a9b04c0947ca46a.glsl",
+      "shader_sha256": "1a9b04c0947ca46a3e64180cb8c32c85862e1b3000c594b0128ecc4ff03d2d4d",
+      "source_essl_sha256": "f6795bb7974ac357d5efa2b3c81cacb9ff0d58a8c5187b8a3714dcea9737e3d9",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_frame4.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/37a553bc52c3d989.glsl",
+      "shader_sha256": "37a553bc52c3d989fb65694998ddfc39a058b67e7f31c245968894f0770809f1",
+      "source_essl_sha256": "6b903ee9ff439d90f588da7af41b5fb293c61129a485348f8c400febb079eda9",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_edge1.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/3909557b13bfa88c.glsl",
+      "shader_sha256": "3909557b13bfa88ccd0bbbdac194cd0ae39449fece2622f63edea0a85fcecce7",
+      "source_essl_sha256": "f9c38c0105b3d41978e39d5a597ba586eeac4d4693134fd6b90a2504eb91ba92",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/CursorBG/shaders/mat_shadow.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/4be5eee54cb5abe2.glsl",
+      "shader_sha256": "4be5eee54cb5abe264fdc91b80296f49c9d0744e203b2a7426d6f07ff0a7d386",
+      "source_essl_sha256": "56d00706ae727ea3fb82ca4d278d5756aab62ee00f4a48b5ac89db18e8299fb8",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/background/shaders/mat_line.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/66a41b5e9c5848b1.glsl",
+      "shader_sha256": "66a41b5e9c5848b1a15b89cb279a52d31c18d8ab2ce5ea7a5222a92c428c2379",
+      "source_essl_sha256": "f6ca049372f5e41329a99677b2e74382b12a95fe3a2edd7f05e9fe4afeaf92da",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_flare1.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/73fb860e62e40746.glsl",
+      "shader_sha256": "73fb860e62e407463560482b88e6ed959e708af92fdda1231948dd8126df9b6d",
+      "source_essl_sha256": "75862169a85a6132fb5d92c4e8799d5973b56242845039b288f37154e3038883",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/CursorBG/shaders/mat_list_gloss.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/809f277f207ea5be.glsl",
+      "shader_sha256": "809f277f207ea5be31df9ccc4dd380f459c41bad5897da6ed7ac46365aea2967",
+      "source_essl_sha256": "eb6a478ee280646458c89a2a581ac81404ad7eb9bcee0de6254891971aaac8a8",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/background/shaders/mat_floor1.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/963b69aafca4e103.glsl",
+      "shader_sha256": "963b69aafca4e103eb5ec07b85454aa64b1bb509040f76f284b148633d15aa45",
+      "source_essl_sha256": "cda43e870863f338e607224e3f2c23920ef4d94e2ad33aea1a97511479865bc2",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/panel/shaders/mat_list_mirrored.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/9ef7219ad8ac6b05.glsl",
+      "shader_sha256": "9ef7219ad8ac6b05c81a56b716922b7065ab667363a2f9d5e3326c1439a7ecae",
+      "source_essl_sha256": "fe2946df4ac32ad5807200ca14ca76799c2f1334ff60289fbaa2dfec1970adf3",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/background/shaders/mat_sky.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/aa67c4b7b0191663.glsl",
+      "shader_sha256": "aa67c4b7b01916635a839e9ec17f8c843d10e5059a91b88a677f19e14e95e31b",
+      "source_essl_sha256": "a9b5f4d7bca98a03838d695a8a9f8603a1cf283f311c81163f055c9b6b9e9c96",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/background/shaders/mat_glow.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/b6d5e42c6e2858f2.glsl",
+      "shader_sha256": "b6d5e42c6e2858f269decbb0a36d9a542dc885fb5841a359c23a20eccbb7384e",
+      "source_essl_sha256": "8acf965d1bba2807f06c36f9bb25309b93370734dd52d7a3a94afbae3946e1fb",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/panel/shaders/mat_list_shadow.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/b8da2966f915fe5e.glsl",
+      "shader_sha256": "b8da2966f915fe5ec6f3314d0a4c092b4d8a7da5da1635025d61754eb1a98807",
+      "source_essl_sha256": "dbb6530f4ff2253376590d20c20af22e2c033ca04b59c8a1dfb1775189e0b0d9",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/panel/shaders/mat_list_bg.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/c9163daf462ec503.glsl",
+      "shader_sha256": "c9163daf462ec5035e40f188c86fbe0ebd0a44a4c43d6534e48512058d7b1680",
+      "source_essl_sha256": "c9984869d220043aa2cc3ce9266336b00cea3fb8925b5a32f33a452ae2c8dda4",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/statusbar/shaders/mat_statusbar.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/mat_statusbar.vert.glsl",
+      "shader_sha256": "ddc68e69ebab4e8423574814fc30728843531e8458de806eb552b76a8d783c3e",
+      "source_essl_sha256": "c1cb1e064052809beec011478381087ddf9001528d66bcad26580a8e7cd6f8e4",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/panel/shaders/mat_list_edge_l.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/ec0105664ee6202f.glsl",
+      "shader_sha256": "ec0105664ee6202ffa8b692e1e6c63ede8ff169f8a0434cdc3be40d67be219be",
+      "source_essl_sha256": "fb63d1885d8ac566b8859c5b27c12d2d175ff43cba66918586b8b5ee7ef1aaa3",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/CursorBG/shaders/mat_bg.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/f1d37c0e8f7d98bb.glsl",
+      "shader_sha256": "f1d37c0e8f7d98bb49d47c2c2c4c2c51d236413e11bc94dcf0a9b7b5e4bf623b",
+      "source_essl_sha256": "7e63715e74649838392fcea5e6d7d4b8c754d78b50f9ff91444a837d213a26a0",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "common/shader/Text_ColorFading_vertex_fadeVertical.shd",
+      "shader_sha256": "21bd82bd8d53570bd6f330770809bd6f6cdce5907d6dc17e8568ffffba0c4ade",
+      "server_fnv1a64_nonstandard_basis": "45f95b73444e3f79",
+      "source_path": "tools/shaders/native-reconstructions/native-linux-v1/Text_ColorFading_vertex_fadeVertical_uv_projection.glsl",
+      "source_essl_sha256": "f7e62334f23d25e0fad0ff9649500469b8616e0506e3925935984539df5b3635",
+      "previous_source_sha256": "d2fd4b1c7eec22faa92a2a703699976fde12ea7a03762624d85fb82cf710b4fc",
+      "basis": "Exact retained SSA: input UV in pa1.xy; unique writes preserve UV.x at out2.w and UV.y at out3.x. Later out2.xyz updates preserve w; out3.y stays zero. Old final out3.xy projects (UV.y,0). Only final projection changed to vec2(out2.w,out3.x), leaving every other byte unchanged. Native symbol logical bases vColor0/4, vFading4/3, vTexCoord8/2 do not express physical packed cross-register output placement.",
+      "qualification": "Direct source dataflow proof plus disposable host Mesa output projection comparison; fresh native CPU finalizer records for this vertex not available yet.",
+      "limitations": "Preserves all prior source arithmetic/native-register assumptions. No live draw pairing, native-frame label or glyph-atlas result claimed."
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/controller_arrow/shaders/mat_arrow.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/0b93dc1126628cda.glsl",
+      "shader_sha256": "0b93dc1126628cda2473fb3cc8265e43fbbd1dc95139d608e381de573655ccd7",
+      "source_essl_sha256": "cabbf769653de767104d6993ce996677f7ce82b629277992ed75a6098da38457",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/CursorBG/shaders/mat_list_pressed.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/0bb0e2183547aacb.glsl",
+      "shader_sha256": "0bb0e2183547aacbe945cbbb23e97ea85fa7c08348a58b24446733669c781358",
+      "source_essl_sha256": "9150bf472633377088480241d9fe00208fd3b8dfca619ae5124cf921459aef4b",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_frame_touch.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/178e9190c72eb45a.glsl",
+      "shader_sha256": "178e9190c72eb45a7fbdf9d6b487113d7a8bdbca94d59fed2a99db7f59625253",
+      "source_essl_sha256": "8967b8b9aa8a5cf1f4e1e5c4e2c8940de2b2b46217e55ca74e6f9429b7e7bfac",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_edge_inner_touch.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/1a37cc86bcb63e31.glsl",
+      "shader_sha256": "1a37cc86bcb63e31a5d19e72e8a080098e032b118830d719d3ce5372fb9bb1be",
+      "source_essl_sha256": "81216bf03e4f19c67848267cebb57e60ead400c8bd29b8625992ba26a4f124c1",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/pad/shaders/mat_top.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/1bb39ac8e4ddef12.glsl",
+      "shader_sha256": "1bb39ac8e4ddef12954b18912922af5d84c53fe4a01cac7e35f3216a8416060b",
+      "source_essl_sha256": "8ca96dfc2cbda4591cf0b3edc970b5297dcb22dac274bd5d366952e03557dd14",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/pad/shaders/mat_pad.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/375b211483984a31.glsl",
+      "shader_sha256": "375b211483984a3126663d24f35684423e0c0631a7111e03d36707bd13090e5e",
+      "source_essl_sha256": "9fc1e74cd1724ba0c984a527c77e8a33247e7e7533acd25e69bafc17f9dbb93a",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_frame.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/6e02005a078d6333.glsl",
+      "shader_sha256": "6e02005a078d63336a621f4b95fe0b59c65ee17dcd0ec25851635e0231537525",
+      "source_essl_sha256": "94887f224c69a0017fecc11e8dcb47130767995bfa9df89b7117ddfbeab99ce7",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/pad/shaders/mat_reflection.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/6e517696a761d8f9.glsl",
+      "shader_sha256": "6e517696a761d8f9fa0ca3cb66f64e73b27a7934d3bfcaebb595264c6c913e81",
+      "source_essl_sha256": "d2357533c2273011f31e4461b9df2f256a5e51cd85305825c8ace91ee60cec4a",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "common/shader/Image_vertex.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/8d11288e219cee7a.glsl",
+      "shader_sha256": "8d11288e219cee7a1e83d0f9bbf3735827c55c618a45d830a3c1f5970020cdd9",
+      "source_essl_sha256": "0cbc9a252dbea8a9dbb28ffd14377a7f0ca4ac50aebc9627fa447120a8a61dd8",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/pad/shaders/mat_pad_bg.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/df0b141abf1f025c.glsl",
+      "shader_sha256": "df0b141abf1f025c94d5a64bc9233fbd46abfa25c7ef4b2e5b89366ac101c26b",
+      "source_essl_sha256": "175e7ce3c3825e785ab837fba577f410cf14f439295b9a87725c61f4b27f4702",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "bmw/id6l/widgetasset/cursor/Cursor/shaders/mat_highlight_main.vert.shd",
+      "source_path": "tools/shaders/native-reconstructions/hmi-vertex/e37592a3fde5b416.glsl",
+      "shader_sha256": "e37592a3fde5b4166c38f15400de1fe702700bdcdec46d8ddb811e8dc6acefa6",
+      "source_essl_sha256": "3ff510fe19752b63673ad8d52a621ba1de9e0a55955b24aa6243ff43061368fa",
+      "basis": "exact .shd symbols + cached QNX finalizer constants + native-register USSE translation"
+    },
+    {
+      "asset_path": "common/shader/Image_vertex_fadeVertical.shd",
+      "shader_sha256": "d31e0a8b63c7a1dc9d23f167fac9aca8e47e020c3ca058087b878889604b0548",
+      "server_fnv1a64_nonstandard_basis": "31d06d375ab75fe1",
+      "source_path": "tools/shaders/native-reconstructions/native-linux-v1/Image_vertex_fadeVertical.glsl",
+      "source_essl_sha256": "038fdfea4ff235b5df34d17046ae51f0b401da3ae7938c7b66ee1ba33d6f75b7",
+      "basis": "Original GLSL from exact 12 primary/4 secondary native-finalized operations and table54. UV rectangle, MVP XYZ+column3, VDP4 using MC1 row2 and original position.w, then two fade ramps. Pinned existing decoder grammar and checked arithmetic/register visitors, not inferred from uniform names.",
+      "native_primary_sha256": "6d1e438f01c22760bc16b66fc19f1cfe217ce38e2ebcb2884100a9b7247e6eab",
+      "native_secondary_sha256": "ed88b80414d24d5860b220343612a7889aeb49277a815ce7412e1478d626b3b9",
+      "native_constant_table_sha256": "d72752e164e331c427b07cfb21d79e50a61189b6ebd98d3a87ed2d54fa69a304",
+      "native_capture_sha256": "6437274a9e5d05e4707248d12131cf4300421246fd247178fad796f71b768edf",
+      "host_validation": "Surfaceless Mesa llvmpipe GLES3 compile/link/readback passed with nontrivial MC1 matrix, translated MVP and position.w=2; checks distinguish matrix row2 from screen-Y and MVP literal1 from position.w.",
+      "limitations": "CPU finalizer and host synthetic readback do not prove live guest loaded/rendered behavior or all SGX544 arithmetic rounding details."
+    }
+  ]
+}

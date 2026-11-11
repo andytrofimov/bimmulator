@@ -1,128 +1,172 @@
-# Local browser client
+# Local browser session
 
-A single real noVNC viewport, fourteen iDrive controller buttons and a bounded,
-read-only serial log. There is no framebuffer imitation, screenshot polling,
-VM lifecycle API, settings editor or cluster display. The browser reconnects
-when its fixed RFB backend returns. No npm build, runtime CDN or automatic
-dependency download is used.
+The ordinary launcher stages verified user-supplied PSdZData and owns the native
+head unit, optional BO03 cluster, vehicle simulator and browser server:
 
-The Python server works on macOS and Linux with Python 3.10+, Unix datagram
-sockets, and a modern browser supporting ES modules and `AbortSignal.timeout`.
-This does not add Linux support to the native emulator launcher.
+```sh
+nix run .#idrive6 -- --web
+```
 
-## Dependencies
+Open <http://127.0.0.1:8090/>. Set `web = true` and optionally `webPort = 8090`
+in the normal TOML config, or pass `--web-port PORT`. Browser mode requires the
+`head-unit` module; `modules = ["head-unit"]` needs no cluster firmware and
+reports KOMBI unavailable. Without browser mode the native GUI path remains.
+The host matrix is Apple silicon macOS/ANGLE and experimental Linux x86_64/Mesa;
+this integration has synthetic host coverage, not new native qualification on
+either host. Windows is deferred.
 
-Keep these exact source archives and their extracts **outside the checkout**.
-Verify SHA-256 before extracting; retain upstream license files and notices.
-The server uses noVNC's core/vendor modules, not its themed application.
+There is one real noVNC viewport with iDrive/KOMBI tabs, fourteen iDrive buttons,
+a single rotary rim, an observational pointer ring, a read-only raw NBT serial
+tail, and next-launch settings. KOMBI uses the existing native BO03 KSS/shared
+RAM recipe and its `cluster` display, not another emulator or an HTML imitation.
+It is view-only, with iDrive controls disabled. Tab switching never retargets a
+shared proxy. Serial stays below the display, including when KOMBI is selected;
+host/cluster logs are not concatenated into it.
+
+## Dependencies and provenance
+
+Nix fetches these external source archives at build time, verifies their hashes,
+and retains upstream license files. They are not vendored in Git. There is no
+npm build, runtime CDN or server/browser download. The optional proxy features
+numpy, requests, jwcrypto and redis are not required; missing numpy only emits
+a performance warning. No target-selection, token, authentication, command or
+recording plugin is enabled.
 
 | Dependency | Official source archive | SHA-256 | License |
 |---|---|---|---|
 | noVNC 1.6.0 | [v1.6.0 archive](https://codeload.github.com/novnc/noVNC/tar.gz/refs/tags/v1.6.0) | `5066103959ef4e9b10f37e5a148627360dd8414e4cf8a7db92bdbd022e728aaa` | Core MPL-2.0; pako MIT; DES BSD-style; see `LICENSE.txt` and source headers |
 | websockify 0.13.0 | [v0.13.0 archive](https://codeload.github.com/novnc/websockify/tar.gz/refs/tags/v0.13.0) | `b6413e364efd04f3c92ec8c17747e3c4adc20157c2ef1c5d019a26d944a46df8` | LGPL-3.0; see `COPYING` and `setup.py` |
 
-The fixed proxy path works without websockify's optional numpy, requests,
-jwcrypto and redis features; numpy absence emits a performance warning.
-No token, authentication, command, recording or target-selection plugins are used.
-Dependencies are not bundled with this client.
+The flake also exports `novnc-source` and `websockify-source`. For standalone
+Python operation, verify/extract these same archives outside the checkout.
+The server requires Python 3.10+, Unix sockets and a modern browser with ES modules
+and `AbortSignal.timeout`. Missing dependencies fail closed before binding; the
+integrated launcher checks them before starting any VM.
 
-## Start the head unit
+## Operator-prepared inputs (advanced)
 
-First stage firmware with the normal launcher. On the supported macOS host,
-use the existing developer profile with an unused loopback VNC display:
+The same session entry point accepts the explicit TOML pair `preparedRoot` and
+`bootImage`, both absolute external paths. This skips only NBT package staging;
+selected BO03 still uses `psdzdata`. NBT-only prepared mode may omit `psdzdata`.
+Required-file metadata is checked before VM spawn and the root/boot paths are
+passed as explicit profile overrides. Fresh archive outputs stay in the external
+cache, never the input root. Root and cache must be disjoint (neither contains
+the other), and the boot image must be outside the mutable cache. No source/package pin is weakened: actual archive
+and shader builders still enforce their supported-byte hashes. Console/session
+records label this mode operator-prepared, **not package-verified**. Metadata
+presence is not provenance or native qualification; use only reviewed matching
+inputs, not roots with unknown apps/overlays. See the main README for the config.
+
+## Settings: current boot versus next launch
+
+Settings → Coding provides three booleans: developer menu, reverse-camera coding
+(RVC), and the optional F32 resources/VariantRegistry overlay. RVC requires F32.
+The launcher loads canonical preferences once, passes explicit profile `--set`
+overrides (profiles override ambient environment), and creates a fresh per-run
+archive. Existing source-pinned overlays transform in-memory tar members only.
+OFF omits optional changes from the next archive; base ID6 Light/F32/English/CID
+settings remain. The immutable staged source tree is not patched or cloned.
+
+The current-boot column comes from the private snapshot of those exact configured
+flags, bound to the fresh run ID. It means **configured at boot**, not verified
+native functionality. The separate pending store is atomically replaced (0700
+owned directory, 0600 regular file); saving cannot replace the snapshot. An
+unmanaged/standalone server without a snapshot reports boot configuration unknown,
+never inferring it from pending values.
+
+The complete schema contains five booleans. Both ConnectedDrive mocks are OFF,
+disabled and marked unavailable; attempts to enable either fail before VM spawn
+or preference persistence. Cleared own app resources, provenance/ABI gates and
+separate native qualification are not part of this release. No full EvoHello,
+ConnectedDrive visual parity or native camera-video acceptance is claimed. The
+aggregate pairs protocol 4 host/provider state forwarding with an explicit, bounded
+[host ESSL selection](../../docs/NATIVE_SHADER_MAPS.md). Do not mix protocol versions.
+These source/pin checks are not universal shader or native rendering proofs.
+
+## Ownership and endpoints
+
+Each invocation creates a fresh run ID and owns only its newly created child
+process groups. Partial startup, any selected ECU/browser failure, Ctrl-C and
+SIGTERM clean up and reap those children with bounded TERM/KILL escalation.
+No systemd service, root factory, global process lookup, historical PID or
+`current-*` alias supplies authority. The BO03 probe retains custody of its
+actual QEMU child through cancellation and bounded reap. The owner observes
+children without reaping (`waitid`/`WNOWAIT`), retaining the kernel PID reservation
+through a full group-wide TERM grace and final KILL, then reaps the entry. Lost or
+unregistered custody refuses group signals. This requires Python 3.13+ on macOS
+(or the pinned Nix Python); unsupported environments fail before VM spawn.
+
+NBT/KOMBI VNC, controller and QMP endpoints live in a fresh private short Unix
+directory, below the conservative 104-byte encoded path limit on both platforms.
+The CID UDP endpoint is chosen per run. The endpoint schema, exact source-input
+hashes and run-bound boot snapshot are saved privately under the external cache's
+`sessions/` directory; NBT logs/archive/manifest are under `runs/RUN_ID/`.
+HTTP endpoint conflicts are checked before VM spawn. A later bind failure still
+ends and cleans up only this invocation. Closing a browser tab leaves the session
+running; stop from the launching terminal. No HTTP lifecycle API is exposed.
+
+## Standalone server (advanced)
+
+The hardened fixed TCP head-unit route remains compatible with an independently
+started native backend. Supply the exact run's serial path and controller socket,
+not a mutable run alias. For example, with an existing trusted local RFB backend:
 
 ```sh
-export IDRIVE_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/idrive6"
-IDRIVE_DISPLAY=none IDRIVE_VNC=127.0.0.1:3 \
-  nix develop -c python3 tools/run-hmi-profile.py \
-  profiles/f32-x20511i-id6-light.json --run-id browser-session
-```
-
-Choose a fresh run ID for each launch. `IDRIVE_VNC` accepts only
-`127.0.0.1:DISPLAY`, with display 0..59635 and no additional QEMU options.
-The TCP port is 5900 + DISPLAY (5903 above). Without this variable the display
-behavior is unchanged. The profile already enables the graphics mailbox,
-CID pointer relay and native controller; no additional guest hook is needed.
-
-The runner prints its run artifact directory; its existing `serial.log` is the
-log to read. The emulator also prints the temporary controller socket path.
-Copy that exact path, not the run directory: the socket belongs to the renderer's
-private temporary work directory and is removed when the emulator exits.
-The printed path is configuration, not a readiness or native-input acknowledgment.
-
-## Start the browser server
-
-In another terminal, set the paths to your dependency extracts, existing serial
-log and the controller socket printed by the running emulator:
-
-```sh
-NOVNC_DIR=/absolute/path/to/noVNC-1.6.0
-WEBSOCKIFY_DIR=/absolute/path/to/websockify-0.13.0
-SERIAL_LOG=/absolute/path/to/run/serial.log
-CONTROLLER_SOCKET=/absolute/path/to/temporary-work/controller.sock
 python3 tools/idrive-web-client.py \
-  --vnc-port 5903 --controller-socket "$CONTROLLER_SOCKET" \
-  --serial-log "$SERIAL_LOG" --novnc "$NOVNC_DIR" --deps "$WEBSOCKIFY_DIR"
+  --vnc-port 5907 --port 8090 \
+  --controller-socket /absolute/run/controller.sock \
+  --serial-log /absolute/run/serial.log \
+  --novnc /external/noVNC-1.6.0 --deps /external/websockify-0.13.0
 ```
 
-Open <http://127.0.0.1:8090/>. Omit `--controller-socket` to disable the buttons.
-The server never launches or restarts a VM. A missing serial log is reported as
-unavailable and retried; the configured file or symlink is never modified.
-A restarted VM may have a different controller path: restart this server with
-the new fixed path rather than selecting paths through HTTP.
+Alternatively use `--vnc-socket /absolute/private/nbt.vnc` instead of `--vnc-port`.
+`--kombi-vnc-socket /absolute/private/cluster.vnc` adds the second fixed target.
+Omit `--controller-socket` to disable buttons. Pending settings are optional via
+`--settings-file` in an owned 0700 directory. Only a trusted launcher should supply
+`--boot-settings-file boot-settings-RUN_ID.json` and matching `--boot-run-id` for a
+newly configured boot. Do not attach a pending document as a boot snapshot.
+The server never starts/stops guests or modifies serial files.
 
-## Boundaries
+## HTTP and input boundaries
 
-Both HTTP binding and the fixed TCP VNC target must be numeric IPv4 loopback
-addresses; their defaults are `127.0.0.1`. Access requires the exact configured
-Host/port (not `localhost` aliases). State-changing requests and WebSocket
-upgrades require the exact same Origin; controller requests additionally require
-a process-random CSRF token and at most 128 bytes of JSON containing exactly one
-allowlisted key. Static routes expose only this client's three assets and
-noVNC core/vendor JavaScript under their configured directory. HTTP cannot
-choose commands, environment variables, filesystem paths or proxy targets.
-There is no TLS, remote access support or VNC credential dialog. Use only a
-trusted local, no-auth RFB backend; loopback access is not multi-user isolation.
-Missing optional dependencies fail closed before the server binds.
+HTTP and fixed TCP VNC addresses must be numeric IPv4 loopback. Requests require
+the exact configured Host/port, not `localhost` aliases. Mutations/WebSocket
+upgrades require the exact same Origin; mutations also need a process-random CSRF
+token. HTTP cannot choose commands, environment, files, proxy targets or paths.
+Static routes expose only the five client assets and noVNC core/vendor JavaScript.
+There is no TLS or remote-access support; loopback is not multi-user isolation.
 
-A control response confirms **transport submission only**, not native acceptance.
-The existing renderer checks readiness and ring capacity. It queues a down/up
-pair atomically for each nonrotary key, or one event for a rotary step; input can
-be dropped if the native ring is not ready or full. The browser never sends a
-separate held-key state, so losing HTTP or a browser tab cannot strand a release.
-Mouse/keyboard input uses noVNC and the existing QEMU CID relay, not a new guest API.
+Control accepts only one allowlisted key and at most 128 JSON bytes. A response
+confirms transport submission only, not native acceptance. The existing renderer
+queues an atomic down/up pair for nonrotary keys or one rotary step; native
+readiness/ring-capacity checks may drop input. Losing a tab cannot strand a
+separate HTTP key-release state. Mouse/keyboard events use noVNC and the existing
+QEMU CID relay. The pointer ring observes input without intercepting it.
 
-The serial endpoint reads at most 64 KiB input bytes per poll. Independent opaque
-cursors preserve split UTF-8 and detect rotation, symlink changes and truncation.
-Control/binary bytes are escaped. The UI uses `textContent`, keeps at most 256 Ki
-characters and clips each displayed batch to 64 Ki characters. Clear affects only
-the browser view, never the source log. This is not a durable log collector.
+Serial reads are bounded to 64 KiB per poll with independent opaque cursors,
+split UTF-8/rotation/truncation handling and control-byte escaping. The UI uses
+`textContent`, retains at most 256 Ki characters, and has a separate serial
+scrollbar. Clear changes only the browser view. Desktop 8:3 display sizing and
+mobile page flow do not crop the display or hide settings actions.
 
-## Firmware-free tests / CI
-
-The dependency-free subset runs with the ordinary test suite. For the real
-websockify HTTP/TCP bridge checks, set both dependency paths explicitly:
+## Firmware-free tests
 
 ```sh
-NOVNC_DIR="$NOVNC_DIR" WEBSOCKIFY_DIR="$WEBSOCKIFY_DIR" \
-  python3 -m unittest discover -s tests -p 'test*web*py' -v
+NOVNC_DIR=/external/noVNC-1.6.0 \
+WEBSOCKIFY_DIR=/external/websockify-0.13.0 \
+CHROME_BIN=/path/to/google-chrome \
+  python3 -m unittest discover -s tests -v
 ```
 
-With neither variable set, optional integration tests skip. An incomplete or
-invalid explicit configuration fails instead of silently skipping. CI jobs
-running this path should fetch and verify the pinned archives above outside the
-checkout, then export these two paths. Add `CHROME_BIN=/path/to/google-chrome`
-for the optional real-browser test (normal Chrome sandbox support is required).
-It creates an ephemeral Chrome profile and private debugging port, decodes a
-known synthetic RFB pixel through real noVNC, checks all fourteen button datagrams,
-mouse forwarding, ring pointer, reconnect, serial text safety, clear and responsive
-layout. History return is checked separately from synthetic persisted-page events;
-the latter cover idempotent resume and stale poll responses, not proof that a
-browser actually used BFCache. HTTP fixtures also reset connections during header
-and body writes. Tests use only owned temporary HTTP/TCP/Unix peers, never a live emulator.
-
-The shell tests execute the unchanged VNC validation/argument source sections
-and reject invalid values through the actual launcher before firmware work.
-They do not boot QEMU. These checks establish neither native HMI visual acceptance
-nor a macOS/Linux native runtime qualification; verify those separately with your
-own staged firmware before relying on a native session.
+Without optional paths, their integration classes skip; incomplete explicit
+configuration fails, not skips. Chrome uses an ephemeral profile/debugging port
+with its normal sandbox. Fixtures use only owned temporary HTTP/TCP/Unix peers,
+synthetic RFB pixels, fake children, and generated archive bytes. They exercise
+the real composition, two concurrent fixed proxy targets, native GUI argument
+compatibility, immutable boot/next settings, six valid coding triples, OFF
+reversibility/source integrity, lifecycle failure/timeout/cancellation, all
+fourteen controller datagrams, view-only KOMBI, pointer safety, reconnect,
+response resets, history return, generation-safe persisted-page events, serial
+safety and four responsive layouts. Persisted-event tests are not proof that
+Chrome used BFCache. None of these tests executes firmware or qualifies native
+loaded/rendered/input behavior.

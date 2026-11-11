@@ -57,7 +57,7 @@ def main() -> int:
         parser.error("run ID may contain only letters, digits, dot, underscore and hyphen")
     run_dir = cache_dir / "runs" / run_id
     try:
-        run_dir.mkdir(parents=True, exist_ok=False)
+        run_dir.mkdir(mode=0o700, parents=True, exist_ok=False)
     except FileExistsError:
         parser.error(f"run output directory already exists: {run_dir}")
 

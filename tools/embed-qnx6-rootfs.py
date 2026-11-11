@@ -1069,6 +1069,23 @@ def embed(
         # making thread-state snapshots impossible to parse reliably.
         mailbox_env = ("export IDRIVE_ANGLE_EGL_MAILBOX=1\n"
                        if os.environ.get("IDRIVE_ANGLE_EGL_MAILBOX") == "1" else "")
+        hmi_usb_setup = (
+            "if [ ! -e /dev/io-usb/io-usb ]; then\n"
+            "  echo 'Starting QEMU EHCI directly (no physical I2C/sysregs prerequisites)' >/dev/ser1\n"
+            "  /bin/io-usb -c -vvv -d hb-ehci-omap3 ioport=0x4a064c00,irq=109,verbose=5,num_itd=256,portd >/dev/shmem/idrive-ehci.log 2>&1 &\n"
+            "fi\n"
+            if os.environ.get("IDRIVE_DIRECT_EHCI") == "1" else ""
+        )
+        hmi_layer_manager_setup = (
+            "if [ ! -e /dev/layermanager ]; then\n"
+            "  echo 'Starting native LayerManagerService directly (Screen already ready)' >/dev/ser1\n"
+            "  /opt/sys/bin/LayerManagerService -w1440 -h540 -d:1 >/dev/ser1 2>&1 &\n"
+            "  n=0\n"
+            "  while [ ! -e /dev/layermanager ] && [ $n -lt 30 ]; do /boot/bin/sleep 1; n=$((n + 1)); done\n"
+            "  if [ ! -e /dev/layermanager ]; then echo 'Direct LayerManagerService did not become ready' >/dev/ser1; exit 1; fi\n"
+            "fi\n"
+            if os.environ.get("IDRIVE_DIRECT_LAYER_MANAGER") == "1" else ""
+        )
         hmi_force_start = (
             "(\n"
             f"{hmi_run_marker}"
@@ -1085,12 +1102,14 @@ def embed(
             "export GRAPHICS_ROOT=/dev/shmem\n"
             f"{mailbox_env}"
             "export LD_LIBRARY_PATH=/dev/shmem:/opt/hmi/ID5/lib:/opt/hmi/lib:/opt/hmi/otf:/boot/lib:/lib:/usr/lib:/opt/sys/lib:/opt/car/lib:.:/lib/graphics/omap5430\n"
+            f"{hmi_usb_setup}"
             f"{hmi_network_setup}"
             f"{hmi_network_diagnostics}"
             f"{pdebug_start}"
             f"{hmi_angle_network_preflight}"
             f"{otf_agent_start}"
             f"{hmi_angle_post_otf_preflight}"
+            f"{hmi_layer_manager_setup}"
             "echo 'Preparing HmiMain3D writable data directories on the root volume' >/dev/ser1\n"
             "/bin/ls -ld /dev/shmem /fs/sda0/opt/hmi/data /var >/dev/ser1 2>&1\n"
             "for hmi_data_dir in /fs/sda0/opt/hmi/data/rw /fs/sda0/opt/hmi/data/rw/RHMI-Cache /fs/sda0/opt/hmi/data/rw/RHMI-Cache/FbmTxtPers /fs/sda0/opt/hmi/data/rw/RHMI-Cache/PersistentA4ARes; do\n"

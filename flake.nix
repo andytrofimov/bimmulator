@@ -101,10 +101,28 @@
           graphicsServer = if isLinux then mesaServer else angleServer;
           serverName = if isLinux then "mesa-egl-rpc-server" else "angle-egl-rpc-server";
           lzoLibrary = "${pkgs.lzo}/lib/liblzo2.${if isLinux then "so" else "dylib"}";
+          webSource = name: version: url: sha256: pkgs.stdenvNoCC.mkDerivation {
+            pname = "idrive6-${name}-source";
+            inherit version;
+            src = pkgs.fetchurl { inherit url sha256; name = "${name}-${version}.tar.gz"; };
+            dontBuild = true;
+            installPhase = ''
+              mkdir -p $out
+              cp -R . $out/
+            '';
+          };
+          novnc = webSource "novnc" "1.6.0"
+            "https://codeload.github.com/novnc/noVNC/tar.gz/refs/tags/v1.6.0"
+            "5066103959ef4e9b10f37e5a148627360dd8414e4cf8a7db92bdbd022e728aaa";
+          websockify = webSource "websockify" "0.13.0"
+            "https://codeload.github.com/novnc/websockify/tar.gz/refs/tags/v0.13.0"
+            "b6413e364efd04f3c92ec8c17747e3c4adc20157c2ef1c5d019a26d944a46df8";
           launcher = pkgs.writeShellApplication {
             name = "idrive6";
             runtimeInputs = [
               pkgs.python3
+              novnc
+              websockify
               pkgs.nix
               pkgs.coreutils
               pkgs.findutils
@@ -130,6 +148,8 @@
               export IDRIVE_LZO_LIBRARY="${lzoLibrary}"
               export IDRIVE_HOST_CXX="${pkgs.clang}/bin/clang++"
               export IDRIVE_ANGLE_SERVER="${graphicsServer}/bin/${serverName}"
+              export IDRIVE_NOVNC="${novnc}"
+              export IDRIVE_WEBSOCKIFY="${websockify}"
               export IDRIVE_NIX="${pkgs.nix}/bin/nix"
               exec ${pkgs.python3}/bin/python3 ${source}/tools/idrive6-launch.py "$@"
             '';
@@ -139,6 +159,8 @@
           packages = {
             default = launcher;
             idrive6 = launcher;
+            novnc-source = novnc;
+            websockify-source = websockify;
             qemu-omap5 = qemu;
             qemu-capricorn-m = pkgs.qemu-capricorn-m;
           } // pkgs.lib.optionalAttrs isLinux {

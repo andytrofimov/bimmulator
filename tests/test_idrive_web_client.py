@@ -167,11 +167,13 @@ class ClientTests(ClientFixture):
 
     def test_static_and_path_boundaries(self):
         self.assertIn(b'/client.js', self.request('/')[1])
+        self.assertEqual(self.request('/settings.js')[0], 200)
+        self.assertEqual(self.request('/api/settings')[0], 503)
         self.assertEqual(self.request('/novnc/core/rfb.js')[0], 200)
         for path in ['/novnc/../../idrive-web-client.py', '/novnc/%2e%2e/%2e%2e/etc/passwd',
                      '/novnc/core/../core/rfb.js', '/novnc/LICENSE.txt', '/novnc/app/ui.js',
                      '/api/log?path=/etc/passwd', '/api/log?cursor=a&cursor=b', '/client.js?x=1',
-                     '/api/settings', '/settings.js', '/websockify/kombi']:
+                     '/settings.json', '/settings.js/extra', '/websockify/kombi']:
             self.assertIn(self.request(path)[0], (400, 404))
         self.assertEqual(self.request('/', headers={'Host': 'evil.test'})[0], 403)
         self.assertEqual(self.request('/api/status', headers={'Origin': 'https://evil.test'})[0], 403)

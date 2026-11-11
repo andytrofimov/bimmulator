@@ -1,6 +1,10 @@
 import RFB from '/novnc/core/rfb.js';
 
 const el = id => document.getElementById(id);
+const routes = {idrive: '/websockify', kombi: '/websockify/kombi'};
+let selectedView = 'idrive';
+let displays = {idrive: true, kombi: false};
+let connectionView = null;
 let rfb = null;
 let stopping = false;
 let reconnectTimer = null;
@@ -30,7 +34,7 @@ rotary.setAttribute('aria-label', 'Rotary controller');
 const rotaryKeys = new Set(['counterclockwise', 'clockwise', 'up', 'left', 'ok', 'right', 'down']);
 
 function updateButtons() {
-    for (const [key, button] of buttons) button.disabled = !csrf || !controllerAvailable || pending.has(key);
+    for (const [key, button] of buttons) button.disabled = selectedView !== 'idrive' || !csrf || !controllerAvailable || pending.has(key);
 }
 for (const [key, [label, accessibleLabel]] of Object.entries(actions)) {
     const button = document.createElement('button');
@@ -46,7 +50,7 @@ for (const [key, [label, accessibleLabel]] of Object.entries(actions)) {
         button.innerHTML = '<svg viewBox="0 0 20 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="6" y="2" width="8" height="12" rx="4"/><path d="M3 10v2a7 7 0 0 0 14 0v-2M10 19v4M6 23h8"/></svg>';
     }
     button.addEventListener('click', async () => {
-        if (!csrf || !controllerAvailable || pending.has(key)) return;
+        if (selectedView !== 'idrive' || !csrf || !controllerAvailable || pending.has(key)) return;
         const epoch = generation;
         pending.add(key);
         updateButtons();
@@ -78,7 +82,7 @@ function clearReconnect() {
     reconnectTimer = null;
 }
 function scheduleConnect(delay = 0) {
-    if (closed || rfb || reconnectTimer !== null) return;
+    if (closed || rfb || reconnectTimer !== null || !displays[selectedView]) return;
     reconnectTimer = setTimeout(() => { reconnectTimer = null; connect(); }, delay);
 }
 function stopConnection() {
@@ -89,21 +93,23 @@ function stopConnection() {
     }
 }
 function connect() {
-    if (closed || rfb) return;
+    if (closed || rfb || !displays[selectedView]) return;
+    const view = selectedView;
     showState('Connecting…');
     let current;
     try {
-        current = new RFB(el('screen'), `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/websockify`);
+        current = new RFB(el('screen'), `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${routes[view]}`);
     } catch {
         showState('Display unavailable');
         scheduleConnect(Math.min(1000 * 2 ** Math.min(retry++, 4), 15000));
         return;
     }
     rfb = current;
+    connectionView = view;
     stopping = false;
     current.scaleViewport = true;
     current.resizeSession = false;
-    current.viewOnly = false;
+    current.viewOnly = view === 'kombi';
     current.addEventListener('connect', () => {
         if (rfb !== current || stopping) return;
         retry = 0;
@@ -114,8 +120,13 @@ function connect() {
         if (rfb !== current) return;
         const intentional = stopping;
         rfb = null;
+        connectionView = null;
         stopping = false;
         if (closed) return;
+        if (!displays[selectedView]) {
+            showState(selectedView === 'kombi' ? 'KOMBI unavailable' : 'iDrive unavailable');
+            return;
+        }
         showState(intentional ? 'Connecting…' : 'Reconnecting…');
         scheduleConnect(intentional ? 0 : Math.min(1000 * 2 ** Math.min(retry++, 4), 15000));
     });
@@ -126,6 +137,40 @@ function connect() {
     });
     current.addEventListener('securityfailure', () => {
         if (rfb === current) showState('Display unavailable');
+    });
+}
+function syncConnection() {
+    if (!displays[selectedView]) {
+        stopConnection();
+        showState(selectedView === 'kombi' ? 'KOMBI unavailable' : 'iDrive unavailable');
+    } else if (rfb && connectionView !== selectedView) {
+        stopConnection();
+        showState('Connecting…');
+    } else scheduleConnect();
+}
+function selectView(view) {
+    if (view === selectedView) return;
+    selectedView = view;
+    updateButtons();
+    retry = 0;
+    clearReconnect();
+    for (const tab of document.querySelectorAll('[data-view]')) {
+        const active = tab.dataset.view === view;
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+    }
+    el('display-panel').setAttribute('aria-labelledby', `view-${view}`);
+    el('screen').setAttribute('aria-label', `Display ${view === 'idrive' ? 'iDrive' : 'KOMBI'}`);
+    syncConnection();
+}
+for (const tab of document.querySelectorAll('[data-view]')) {
+    tab.addEventListener('click', () => selectView(tab.dataset.view));
+    tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const view = event.key === 'Home' ? 'idrive' : event.key === 'End' ? 'kombi' : selectedView === 'idrive' ? 'kombi' : 'idrive';
+        selectView(view);
+        el(`view-${view}`).focus();
     });
 }
 // Observe only: no preventDefault, synthetic input or interference with noVNC.
@@ -158,9 +203,11 @@ async function status(epoch = generation) {
         if (closed || generation !== epoch) return;
         csrf = data.csrf;
         controllerAvailable = Boolean(data.controller);
+        displays = {idrive: data.displays?.idrive?.available ?? true,
+            kombi: data.displays?.kombi?.available ?? false};
         el('control-status').textContent = controllerAvailable ? '' : 'Controls unavailable';
         updateButtons();
-        scheduleConnect();
+        syncConnection();
     } catch {
         if (closed || generation !== epoch) return;
         csrf = null;

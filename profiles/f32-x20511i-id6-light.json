@@ -18,6 +18,8 @@
     "IDRIVE_SOFTWARE_SCREEN_PROBE": "1",
     "IDRIVE_STARTER_VARIANT": "0x80000004",
     "IDRIVE_HMI_FORCE_START": "1",
+    "IDRIVE_DIRECT_EHCI": "1",
+    "IDRIVE_DIRECT_LAYER_MANAGER": "1",
     "IDRIVE_HMI_CODING_ID6_LIGHT": "1",
     "IDRIVE_HMI_RESOURCE_EN_US": "1",
     "IDRIVE_HMI_CODING_CID_1440": "1",
@@ -39,15 +41,16 @@
     "IDRIVE_TCG_THREAD": "multi",
     "IDRIVE_QEMU_CPUS": "2",
     "IDRIVE_ANGLE_DRAW_CAPTURE_LIMIT": "256",
-    "IDRIVE_HMI_VERTEX_SHADER_MAP_MANIFEST": "{repo_root}/tools/shaders/native-reconstructions/hmi-vertex-map-v67.json",
-    "IDRIVE_HMI_FRAGMENT_SHADER_MAP_MANIFEST": "{repo_root}/tools/shaders/native-reconstructions/hmi-fragment-map-v112.json"
+    "IDRIVE_HMI_VERTEX_SHADER_MAP_MANIFEST": "{repo_root}/tools/shaders/native-reconstructions/hmi-linux-native-vertex-v1.json",
+    "IDRIVE_HMI_FRAGMENT_SHADER_MAP_MANIFEST": "{repo_root}/tools/shaders/native-reconstructions/hmi-linux-native-fragment-v1.json"
   },
   "paths": {
     "IDRIVE_BOOT_IMAGE": "{cache_dir}/firmware/x20511i-007_030_001-v1/firmware/sda2/boot1.ifs",
-    "IDRIVE_ROOT_ARCHIVE_OUTPUT": "{cache_dir}/idrive-rootfs-omap5-graphics-cid1440-matched-assets-bench-en-us.tar.gz",
+    "IDRIVE_ROOT_ARCHIVE_OUTPUT": "{run_dir}/rootfs.tar.gz",
     "IDRIVE_ROOTFS_TREE": "{cache_dir}/firmware/x20511i-007_030_001-v1/rootfs",
     "IDRIVE_REALIZED_ROOTFS": "{cache_dir}/firmware/x20511i-007_030_001-v1/rootfs",
     "IDRIVE_QEMU_SHARED_RAM_FILE": "{run_dir}/shared-ram.bin",
+    "IDRIVE_HMI_CONTROLLER_SOCKET": "",
     "IDRIVE_QEMU_QMP_SOCKET": "{run_dir}/qmp.sock",
     "IDRIVE_SERIAL0_BACKEND": "file",
     "IDRIVE_SERIAL_LOG": "{run_dir}/serial.log",
