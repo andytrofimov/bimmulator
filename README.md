@@ -1,8 +1,26 @@
 # BMW iDrive 6 emulator
 
-This project boots the native BMW F32 iDrive 6 Light interface in patched
-QEMU. It does not include BMW firmware. You supply an extracted PSdZData
-directory containing the verified NBTevo X20511I packages.
+Native BMW F32 iDrive 6 Light in patched QEMU, with a local browser interface,
+iDrive controls and a separate native BO03 6WB cluster. The head unit remains
+ARM/QNX; Linux x86_64 and Apple silicon macOS are host platforms.
+
+![Native iDrive Home and browser controller](docs/assets/idrive.png)
+
+*Real ARM/QNX HmiMain3D rendered through Mesa and noVNC on Linux—not an HTML
+imitation. Firmware is supplied externally and is not included.*
+
+<details>
+<summary>Native BO03 6WB cluster</summary>
+
+![Native BO03 cluster in the KOMBI tab](docs/assets/cluster.png)
+
+The MIPS/Capricorn-M cluster is a separate guest; its browser tab is view-only.
+
+</details>
+
+**One session:** head unit + optional cluster + browser + next-boot Coding.
+
+[Quick start](#quick-start) · [Prepared inputs](#advanced-operator-prepared-head-unit-inputs) · [Credits and provenance](CREDITS.md)
 
 ## Quick start
 
@@ -29,7 +47,13 @@ For the first run, check and stage the firmware:
 nix run .#idrive6 -- --prepare-only
 ```
 
-Then start the selected modules:
+Start the complete browser session:
+
+```sh
+nix run .#idrive6 -- --web
+```
+
+Open <http://127.0.0.1:8090/>. For native desktop windows instead, omit `--web`:
 
 ```sh
 nix run .#idrive6
@@ -60,6 +84,45 @@ source or store. Both paths may contain spaces.
 The launcher reads `./idrive6.toml` by default; pass `--config /path/to/file`
 to either command to use another config.
 
+### Advanced: operator-prepared head-unit inputs
+
+For a legally retained, already prepared matching head-unit root/boot image,
+explicitly supply both external paths instead of NBT SWFL staging:
+
+```toml
+modules = ["head-unit", "6wb"]
+preparedRoot = "/external/prepared-root"
+bootImage = "/external/boot1.ifs"
+psdzdata = "/external/psdzdata" # used only for BO03 in this mode
+cacheDir = "/external/fresh-output-cache"
+web = true
+```
+
+Use the same `nix run .#idrive6` entry point. With `modules = ["head-unit"]`,
+`psdzdata` may be omitted. Both prepared paths must be outside the checkout;
+required-file metadata is checked before VM spawn. This is **operator-prepared,
+not package-verified** input reuse: it does not establish the original SWFL
+provenance and is not a way to accept another firmware revision. The unchanged
+archive/shader source pins still reject incompatible data. Inputs remain
+read-only; each invocation creates fresh output/archive paths and explicitly
+overrides the profile's root/boot paths. `--prepare-only` checks the supplied
+paths and stages selected BO03 inputs without starting any VM. Never point this
+mode at a root with unreviewed third-party applications or optional overlays.
+The output cache and prepared root must be disjoint: neither may contain the
+other. The boot image must also be outside the mutable output cache.
+
+Developers with an existing artifact environment can invoke the same owner as
+`python3 tools/idrive6-launch.py --config /external/config.toml --web` from the
+checkout. `IDRIVE_QEMU`, `IDRIVE_KOMBI_QEMU`, `IDRIVE_ANGLE_SERVER` (or
+`IDRIVE_ANGLE_EGL_SERVER_BIN`), `IDRIVE_QNX_CLANG`, and `IDRIVE_LZO_LIBRARY`
+select the host artifacts; `IDRIVE_NOVNC` and `IDRIVE_WEBSOCKIFY` select the pinned
+external web sources. Keep the usual LLVM/host tools in PATH. `IDRIVE_NIX`
+selects the existing Nix executable used only to evaluate TOML, not to build
+replacement artifacts. The ordinary Nix entry point supplies these automatically.
+The integrated owner requires `os.waitid`/`WNOWAIT` to reserve child identities
+until group cleanup completes; manual macOS environments need Python 3.13+.
+Missing custody support fails before VM spawn; use the pinned Nix launcher.
+
 ## Controls and logs
 
 Use the mouse for CID touch. The controller mapping uses the wheel or Page
@@ -85,15 +148,43 @@ nix develop -c python3 tools/run-hmi-profile.py \
   --set IDRIVE_OTF_CAPTURE_SERVER_LOG=/tmp/idrive6-otf.log
 ```
 
-### Optional local browser client
+### Integrated local browser session
 
-The [browser client](tools/web-client/README.md) shows the real head-unit RFB
-viewport, fourteen iDrive controls and a read-only serial tail. It uses external,
-pinned noVNC/websockify sources and an optional loopback-only `IDRIVE_VNC` listener;
-no web dependencies are needed for the normal launcher. See that guide for the
-existing developer-profile launch command, dependency verification and
-firmware-free HTTP/browser tests. The Python browser server supports macOS and
-Linux independently of the native emulator host requirements.
+```sh
+nix run .#idrive6 -- --web
+```
+
+This one command verifies/stages your external inputs when needed and owns the
+head unit, optional BO03 cluster, vehicle simulator and local browser server as
+one session. Open <http://127.0.0.1:8090/>. Use `--web-port PORT` (or `webPort`
+in TOML) for another unused loopback port; `web = true` selects browser mode in
+the config. Browser mode requires `head-unit`; `modules = ["head-unit"]` works
+without cluster firmware and shows KOMBI as unavailable. Browser mode suppresses
+native display windows, but the ordinary command without `--web` is unchanged.
+
+The two tabs use real, isolated RFB targets. KOMBI is view-only; all fourteen
+iDrive buttons are disabled on that tab. Raw NBT serial remains below the display
+and is never combined with host or cluster logs. Nix fetches pinned noVNC 1.6.0
+and websockify 0.13.0 sources at build time; nothing is downloaded by the web
+server or browser. See the [browser guide](tools/web-client/README.md) for pins,
+security boundaries, standalone operation and firmware-free tests.
+
+Settings → Coding offers developer menu, reverse-camera coding and the optional
+F32 VariantRegistry overlay for the **next fresh launch**. RVC requires F32
+resources. The current-boot column is a frozen, run-bound snapshot of the flags
+actually supplied to that launch, not a claim that native menu/camera functions
+were verified. Saving or editing pending values never changes that column or the
+running guest. OFF omits the optional overlay from the next fresh archive; the
+base ID6 Light/F32/English/CID profile remains. Source firmware is not modified.
+Pending preferences live in the external cache's private `settings/pending.json`;
+private boot snapshots and endpoint/source records live under `sessions/`.
+
+Both ConnectedDrive mocks are visibly unavailable, default OFF, and cannot be
+enabled in this release. Their private app/provenance/ABI/native qualification is
+not provided. Stop the session with Ctrl-C or SIGTERM in the launching terminal;
+closing a browser tab does not stop the VMs. Child failure or closing a native
+ECU window ends the whole session. Cleanup is bounded to the process groups
+created by this invocation; no existing VM, global service or saved PID is adopted.
 
 ## Current limits
 
@@ -101,9 +192,19 @@ The F32 home interface, text, controller input, and CID touch run through
 BMW's native HmiMain3D and QNX Screen. QEMU supplies an OMAP5430 board model
 and a software display path. The PowerVR SGX540 is not fully emulated; the
 host EGL bridge implements the graphics calls used by the tested HMI path.
-The macOS path continues to use ANGLE; Linux uses Mesa with the same version-3
-RPC and unchanged QNX provider. Other vehicle variants and the full Linux
-firmware boot/UI path are not part of the verified release.
+The macOS path continues to use ANGLE; Linux uses Mesa. This fork pairs version-4
+RPC with its matching QNX provider for stencil and blend-state forwarding; host
+and guest provider protocol versions must match. On Linux x86_64, the built Nix launcher was exercised with operator-prepared
+X20511I inputs: native 1440×540 iDrive Home and 1280×480 BO03 rendered in the
+browser, and one native rotary detent visibly moved Home focus. The screenshots
+above come from that actual app-free/mock-free session. This does not qualify
+fresh NBT SWFL staging, every native screen, other firmware, camera video or
+macOS runtime. Windows is deferred.
+
+The graphics core includes paired host/provider stencil and blend-state forwarding
+and a bounded, hash-pinned [host ESSL selection](docs/NATIVE_SHADER_MAPS.md).
+It is not complete private-lab parity: own PluginApp/SDK and ConnectedDrive mocks
+are not included. Full ConnectedDrive app behavior and camera video are not claimed.
 
 ## Developer notes
 
@@ -115,6 +216,8 @@ firmware boot/UI path are not part of the verified release.
   and startup dependencies.
 - [Third-party notices](THIRD_PARTY_NOTICES.md) covers the QEMU patches and
   optional Vita3K-based shader diagnostics.
+- [Credits and provenance](CREDITS.md) identifies the original project, contributors
+  and external dependencies; upstream history and notices are retained.
 - `tools/` contains the retained firmware extraction, graphics, and QNX
   diagnostics. Enter `nix develop` for the corresponding build tools.
 
@@ -138,7 +241,7 @@ QEMU. The device tests use QEMU directly and need no firmware or GUI.
 
 ### Linux host EGL checks
 
-To build just the Mesa bridge and exercise its real version-3 RPC path without
+To build just the Mesa bridge and exercise its real version-4 RPC path without
 QEMU, firmware, a desktop, or a GPU:
 
 ```sh
