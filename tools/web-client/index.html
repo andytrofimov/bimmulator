@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BMW · VM</title>
+  <link rel="stylesheet" href="/client.css">
+</head>
+<body>
+  <header class="toolbar">
+    <span class="brand">BMW <span>VM</span></span>
+    <span id="vnc-status" role="status">Connecting…</span>
+  </header>
+  <main>
+    <div class="workspace">
+      <section id="display-panel" class="display" aria-label="iDrive display">
+        <div id="viewport">
+          <div id="screen" aria-label="iDrive display"></div>
+          <span id="pointer" aria-hidden="true" hidden></span>
+          <div id="display-state" role="status" hidden></div>
+        </div>
+      </section>
+      <section class="controller-panel" aria-label="iDrive controller">
+        <div id="controls" aria-label="iDrive buttons"></div>
+        <div id="control-status" role="status"></div>
+      </section>
+    </div>
+    <section class="serial" aria-labelledby="serial-title">
+      <div class="serial-toolbar"><h2 id="serial-title">Serial</h2><span id="log-status">Waiting…</span><button id="clear">Clear</button></div>
+      <pre id="log" tabindex="0" aria-label="Raw serial log"></pre>
+    </section>
+  </main>
+  <script type="module" src="/client.js"></script>
+</body>
+</html>

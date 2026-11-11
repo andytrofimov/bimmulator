@@ -70,6 +70,16 @@ SCREEN_SHARED_RAM_POST="${IDRIVE_SCREEN_SHARED_RAM_POST:-0}"
 SCREEN_SHARED_RAM_POST_MODE="${IDRIVE_SCREEN_SHARED_RAM_POST_MODE:-read-write}"
 SCREEN_NATIVE_SHARED_IMAGE="${IDRIVE_SCREEN_NATIVE_SHARED_IMAGE:-0}"
 
+# Keep the optional unauthenticated RFB listener private. Accept only a fixed
+# numeric loopback address and display number, never QEMU's extra VNC options.
+if [[ -n "${IDRIVE_VNC:-}" ]]; then
+  if [[ ! "$IDRIVE_VNC" =~ ^127\.0\.0\.1:([0-9]{1,5})$ ]] ||
+      (( 10#${BASH_REMATCH[1]} > 59635 )); then
+    echo "IDRIVE_VNC must be 127.0.0.1:DISPLAY (0..59635), without options." >&2
+    exit 1
+  fi
+fi
+
 if [[ -z "${IDRIVE_ROOTFS_TREE:-}" && -d "$IDRIVE_CACHE_DIR/rootfs-x20511i" ]]; then
   IDRIVE_ROOTFS_TREE="$IDRIVE_CACHE_DIR/rootfs-x20511i"
 fi
@@ -877,6 +887,7 @@ if [[ "$ANGLE_EGL_MAILBOX" == "1" ]]; then
 fi
 if [[ "$HMI_CONTROLLER" == "1" ]]; then
   HMI_CONTROLLER_SOCKET="$WORK_DIR/controller.sock"
+  echo "HMI controller socket (available when the renderer is ready): $HMI_CONTROLLER_SOCKET"
 fi
 QEMU_DEBUG_LOG="${IDRIVE_QEMU_DEBUG_LOG:-$IDRIVE_CACHE_DIR/qemu-debug-${EMULATOR_PROFILE}.log}"
 if [[ -n "${IDRIVE_STARTER_VARIANT:-}" ]]; then
@@ -1430,6 +1441,9 @@ if [[ "${IDRIVE_SGX_SIZE_LOG_PROBE:-0}" == "1" ]]; then
   echo "QNX sloginfo will stream SGXMKIF size-check records to the serial log before Screen starts."
 fi
 
+if [[ -n "${IDRIVE_VNC:-}" ]]; then
+  QEMU_ARGS+=( -vnc "$IDRIVE_VNC" )
+fi
 if [[ -n "${IDRIVE_DISPLAY:-}" ]]; then
   QEMU_ARGS+=( -display "$IDRIVE_DISPLAY" )
 elif [[ "$EMULATOR_PROFILE" != "omap5" && "$EMULATOR_PROFILE" != "omap5-graphics" ]]; then

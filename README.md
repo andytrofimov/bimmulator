@@ -85,6 +85,16 @@ nix develop -c python3 tools/run-hmi-profile.py \
   --set IDRIVE_OTF_CAPTURE_SERVER_LOG=/tmp/idrive6-otf.log
 ```
 
+### Optional local browser client
+
+The [browser client](tools/web-client/README.md) shows the real head-unit RFB
+viewport, fourteen iDrive controls and a read-only serial tail. It uses external,
+pinned noVNC/websockify sources and an optional loopback-only `IDRIVE_VNC` listener;
+no web dependencies are needed for the normal launcher. See that guide for the
+existing developer-profile launch command, dependency verification and
+firmware-free HTTP/browser tests. The Python browser server supports macOS and
+Linux independently of the native emulator host requirements.
+
 ## Current limits
 
 The F32 home interface, text, controller input, and CID touch run through

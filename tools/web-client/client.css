@@ -1,0 +1,65 @@
+:root { color-scheme: dark; font: 14px/1.4 system-ui, sans-serif; color: #e1e5e9; background: #16191d; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 12px; }
+button { color: inherit; background: #2b3036; border: 1px solid #535b65; border-radius: 5px; font: inherit; cursor: pointer; min-height: 36px; padding: 6px 12px; }
+button:hover:not(:disabled) { background: #3b444f; }
+button:active:not(:disabled) { background: #496477; }
+button:disabled { opacity: .4; cursor: default; }
+button:focus-visible, pre:focus-visible { outline: 2px solid #79c7ff; outline-offset: 3px; }
+[hidden] { display: none !important; }
+.toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.brand { font-weight: 700; letter-spacing: .1em; white-space: nowrap; }
+.brand span { color: #929da9; font-weight: 400; }
+#vnc-status { color: #aab5c0; font-size: 12px; margin-left: auto; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 304px; gap: 16px; align-items: start; }
+.display { min-width: 0; }
+#viewport { position: relative; aspect-ratio: 8 / 3; overflow: hidden; background: #000; border: 1px solid #3d454e; border-radius: 4px; }
+#screen { position: absolute; inset: 0; width: 100%; height: 100%; }
+#pointer { position: absolute; width: 24px; height: 24px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 2px #0009, 0 0 8px #000; background: #79c7ff33; transform: translate(-50%, -50%); pointer-events: none; z-index: 2; }
+#display-state { position: absolute; inset: 0; display: grid; place-items: center; color: #aab5c0; background: #090c10; pointer-events: none; }
+.controller-panel { padding: 14px 12px 8px; border: 1px solid #3d454e; border-radius: 12px; background: #1e2329; }
+#controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; }
+#controls > button { font-size: 12px; padding-inline: 4px; }
+.key-menu { grid-column: 2; grid-row: 1; }
+.key-media { grid-column: 1; grid-row: 2; }
+.key-telephone { grid-column: 1; grid-row: 3; }
+.key-navigation { grid-column: 3; grid-row: 2 / 4; }
+.rotary { grid-column: 1 / -1; grid-row: 4; justify-self: center; width: 242px; height: 224px; position: relative; margin: 2px 0; border: 2px solid #626d79; border-radius: 50%; background: #22282f; }
+.rotary button { position: absolute; display: grid; place-items: center; padding: 0; width: 48px; height: 38px; font-size: 21px; border-radius: 20px; }
+.rotary .key-counterclockwise { left: 13px; top: 12px; }
+.rotary .key-clockwise { right: 13px; top: 12px; }
+.rotary .key-up { left: 95px; top: 33px; }
+.rotary .key-down { left: 95px; bottom: 25px; }
+.rotary .key-left { left: 26px; top: 94px; }
+.rotary .key-right { right: 26px; top: 94px; }
+.rotary .key-ok { left: 91px; top: 87px; width: 56px; height: 56px; font-size: 15px; border-radius: 50%; border-color: #8895a2; }
+.key-back { grid-column: 1; grid-row: 5; }
+.key-voice { grid-column: 2; grid-row: 5; justify-self: center; width: 40px; }
+.key-voice svg { width: 17px; height: 20px; vertical-align: middle; }
+.key-options { grid-column: 3; grid-row: 5; }
+#control-status { min-height: 20px; margin-top: 8px; font-size: 12px; color: #e2b68b; text-align: center; }
+.serial { margin-top: 14px; }
+.serial-toolbar { display: flex; align-items: center; gap: 12px; }
+h2 { font-size: 13px; font-weight: 600; margin: 0; }
+#log-status { color: #939eaa; font-size: 12px; }
+#clear { margin-left: auto; min-height: 28px; padding: 2px 10px; font-size: 12px; }
+#log { height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #3d454e; border-radius: 4px; background: #101317; padding: 8px; margin: 6px 0 0; font: 12px/1.4 ui-monospace, monospace; }
+/* Fit ordinary desktop heights without hiding the page or cropping noVNC.
+   The raw log keeps its own scrollbar and a usable minimum height. */
+@media (min-width: 761px) {
+  body { height: 100dvh; display: flex; flex-direction: column; }
+  .toolbar { flex-shrink: 0; }
+  main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .workspace { flex-shrink: 0; }
+  .serial { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 130px; }
+  .serial-toolbar { flex-shrink: 0; }
+  #log { flex: 1 1 180px; min-height: 96px; max-height: 180px; }
+}
+@media (max-width: 760px) {
+  body { padding: 8px; }
+  .toolbar { gap: 8px; flex-wrap: wrap; }
+  #vnc-status { font-size: 11px; }
+  .workspace { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .controller-panel { width: min(100%, 360px); justify-self: center; }
+}
+@media (max-width: 390px) { .brand { display: none; } }
