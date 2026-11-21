@@ -186,6 +186,16 @@ closing a browser tab does not stop the VMs. Child failure or closing a native
 ECU window ends the whole session. Cleanup is bounded to the process groups
 created by this invocation; no existing VM, global service or saved PID is adopted.
 
+### Optional Plugin Apps
+
+Set `pluginApps = true` in the launcher configuration to enable REMOTE_HMI
+coding for RemotingBundle in the next fresh ID6 Light head-unit boot. It is off
+by default and does not edit the source firmware or install any plugins. Stage
+only trusted, compatible plugins in the external firmware root under
+`opt/hmi/ID5/data/ro/Plugins`. This option is independent of the browser and
+does not enable the ConnectedDrive mocks or provide the private PluginApp SDK.
+See the [HMI startup trace](HMI_STARTUP_DEPENDENCY.md#v80-remotingbundle-and-dxs-gate).
+
 ## Current limits
 
 The F32 home interface, text, controller input, and CID touch run through

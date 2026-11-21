@@ -42,6 +42,15 @@ class LaunchConfigTests(unittest.TestCase):
             with self.subTest(modules=modules), self.assertRaisesRegex(ValueError, "modules must select"):
                 self.config(modules=modules)
 
+    def test_plugin_apps_is_default_off_and_requires_boolean_head_unit_config(self):
+        self.assertIs(self.config()["pluginApps"], False)
+        self.assertIs(self.config(pluginApps=True, modules=["head-unit"])["pluginApps"], True)
+        for value in (0, 1, "true", None, []):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "pluginApps must be"):
+                self.config(pluginApps=value)
+        with self.assertRaisesRegex(ValueError, "pluginApps requires the head-unit"):
+            self.config(pluginApps=True, modules=["6wb"])
+
     def test_host_display_defaults_and_overrides(self):
         for host, native in ((("Darwin", "arm64"), "cocoa"), (("Linux", "x86_64"), "gtk")):
             with self.subTest(host=host):

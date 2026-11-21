@@ -30,7 +30,7 @@ PACKAGES = {
     "swfl_00002720.bin.007_030_001": "a9222a2432f5318f06aec563321832a3ba41fde60a4692cbb0cf34317b2f37e1",
 }
 MODULES = ("head-unit", "6wb")
-EXPECTED = {"psdzdata", "cacheDir", "display", "cpuCount", "modules", "web", "webPort", "preparedRoot", "bootImage"}
+EXPECTED = {"psdzdata", "cacheDir", "display", "cpuCount", "modules", "web", "webPort", "preparedRoot", "bootImage", "pluginApps"}
 RELEASE = "x20511i-007_030_001-v1"
 STAGING_SCHEMA = 2
 
@@ -73,6 +73,11 @@ def checked_config(project: Path, file: Path, nix: str) -> dict:
         raise ValueError("webPort must be an integer in 1..65535")
     if config["web"] and "head-unit" not in modules:
         raise ValueError("browser mode requires the head-unit module")
+    config.setdefault("pluginApps", False)
+    if type(config["pluginApps"]) is not bool:
+        raise ValueError("pluginApps must be true or false.")
+    if config["pluginApps"] and "head-unit" not in modules:
+        raise ValueError("pluginApps requires the head-unit module")
     prepared = "preparedRoot" in config or "bootImage" in config
     if prepared:
         if "head-unit" not in modules or not {"preparedRoot", "bootImage"} <= set(config):
@@ -307,6 +312,7 @@ def head_unit_command(project, config, firmware, *, run_id=None, endpoints=None,
     command = [sys.executable, str(project / "tools/run-hmi-profile.py"), str(profile),
                "--set", f"IDRIVE_QEMU_CPUS={config['cpuCount']}",
                "--set", f"IDRIVE_TCG_THREAD={environment['IDRIVE_TCG_THREAD']}",
+               "--set", f"IDRIVE_HMI_CODING_REMOTE_HMI={int(config.get('pluginApps', False))}",
                "--set", f"IDRIVE_BOOT_IMAGE={boot}",
                "--set", f"IDRIVE_ROOTFS_TREE={root}",
                "--set", f"IDRIVE_REALIZED_ROOTFS={root}"]

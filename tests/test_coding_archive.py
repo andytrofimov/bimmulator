@@ -19,7 +19,7 @@ spec.loader.exec_module(archive)
 
 
 class CodingArchiveTests(unittest.TestCase):
-    def test_six_real_archive_combinations_and_off_reversal_source_unchanged(self):
+    def test_archive_overlays_cache_reversal_and_source_unchanged(self):
         with tempfile.TemporaryDirectory(prefix='id6-coding-') as directory:
             base = Path(directory)
             root = base / 'root'
@@ -81,8 +81,33 @@ class CodingArchiveTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, 'requires'):
                     archive.archive_rootfs(root, base / 'invalid.tar', compressed=False,
                         emulator_profile='omap5-graphics', hmi_coding_id6l=True, hmi_coding_camera_rvc=True)
+
+                # Reuse one output to exercise cache invalidation ON and OFF.
+                output = base / 'plugin.tar.gz'
+                kwargs = dict(compressed=True, emulator_profile='omap5-graphics',
+                              hmi_coding_id6l=True, hmi_coding_cid_1440=True,
+                              hmi_coding_cid_touch=True, cache_unchanged=True)
+                for enabled in (False, True, False):
+                    archive.archive_rootfs(root, output, hmi_coding_remote_hmi=enabled, **kwargs)
+                    expected = baseline[:0xDB32B] + bytes([0x10 if enabled else 0]) + baseline[0xDB32C:]
+                    with tarfile.open(output) as tar:
+                        self.assertEqual(tar.extractfile(archive.HMI_CODING_PATH).read(), expected)
+                with self.assertRaisesRegex(RuntimeError, 'requires.*ID6 Light'):
+                    archive.archive_rootfs(root, output, hmi_coding_remote_hmi=True,
+                                           **{**kwargs, 'hmi_coding_id6l': False})
+                with self.assertRaisesRegex(RuntimeError, 'require.*omap5-graphics'):
+                    archive.archive_rootfs(root, output, hmi_coding_remote_hmi=True,
+                                           **{**kwargs, 'emulator_profile': 'omap5'})
             after = {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('*') if p.is_file()}
             self.assertEqual(before, after)
+
+    def test_remote_hmi_rejects_unexpected_pristine_byte(self):
+        data = bytearray(0xDC000)
+        struct.pack_into('<III', data, archive.HMI_CODING_DEFAULTS_INDEX_OFFSET + 6 * 12,
+                         7, 0x96, 0xDB2C0)
+        data[0xDB32B] = 0x80
+        with self.assertRaisesRegex(RuntimeError, 'unexpected bytes at 0xdb32b'):
+            archive._hmi_coding_remote_hmi_overlay(data)
 
 
 if __name__ == '__main__':

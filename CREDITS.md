@@ -6,6 +6,8 @@ This fork builds on [agent00jackson/bimmulator](https://github.com/agent00jackso
 
 The Linux x86_64 host port and local browser-client contributions are maintained by [andytrofimov](https://github.com/andytrofimov). Their independent upstream drafts are [Linux host support](https://github.com/agent00jackson/bimmulator/pull/1) and [noVNC/iDrive client](https://github.com/agent00jackson/bimmulator/pull/2). Implementation, tests and contribution descriptions were prepared with an AI coding agent; this is not a claim of human review or qualification on every platform.
 
+The optional Plugin Apps coding overlay is adapted from [Simon Henley's upstream PR #5](https://github.com/agent00jackson/bimmulator/pull/5).
+
 ## Dependencies and prior work
 
 - **QEMU contributors** — the machine emulation and device framework. The repository's QEMU patches retain their original provenance and GPL notices.

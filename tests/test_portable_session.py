@@ -80,6 +80,23 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(Path(actual['IDRIVE_HMI_RUN_DIR']).stat().st_mode & 0o777, 0o700)
             self.assertTrue(actual['IDRIVE_ROOT_ARCHIVE_OUTPUT'].startswith(actual['IDRIVE_HMI_RUN_DIR'] + '/'))
 
+    def test_plugin_apps_reaches_profile_for_native_and_browser_runs(self):
+        firmware = self.root / 'firmware'
+        (firmware / 'rootfs').mkdir(parents=True)
+        runner = runpy.run_path(str(TOOLS / 'run-hmi-profile.py'))['main']
+        key = 'IDRIVE_HMI_CODING_REMOTE_HMI'
+        endpoints = {'nbt_qmp': self.root / 'qmp', 'nbt_vnc': self.root / 'vnc',
+                     'controller': self.root / 'controller', 'directory': self.root, 'cid_port': 43567}
+        for web in (False, True):
+            for enabled in (False, True):
+                with self.subTest(web=web, enabled=enabled), patch.dict(os.environ, {key: '1'}):
+                    command, env = launch['head_unit_command'](
+                        TOOLS.parent, {**self.config, 'web': web, 'pluginApps': enabled}, firmware,
+                        run_id=f'plugin-fixture-{int(web)}-{int(enabled)}', endpoints=endpoints, values=DEFAULTS)
+                    with patch.dict(os.environ, env), patch.object(sys, 'argv', command[1:]), patch('os.execvpe') as execute:
+                        self.assertEqual(runner(), 127)
+                    self.assertEqual(execute.call_args.args[2][key], str(int(enabled)))
+
     def test_browser_config_rejects_types_and_cluster_only_before_spawn(self):
         file = self.root / 'config.toml'
         file.touch()

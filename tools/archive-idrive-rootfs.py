@@ -62,6 +62,13 @@ HMI_ID6L_PATCHES = (
     (0xDAEF9, b"\x08", b"\x0c"),
 )
 HMI_DEVELOPER_MENU_PATCH = (0xDAEF8, b"\x00", b"\x40")
+# Built-in defaults index entry 7 is page 0x3000, 0x96 bytes at 0xdb2c0.
+# The coding descriptor for feature 0x019a (va_REMOTE_HMI, the active value;
+# 0x019b is _nicht_aktiv) is byte 0x6b, mask 0x70, value 1. The shipped
+# default byte is zero, which leaves REMOTE_HMI, A4A (mask 0x80 in the same
+# byte) and A4A_REMOTE_APPS (byte 0x6c bit 0) all inactive, so the derived
+# feature 0x9c56 is false and RemotingBundle skips its start.
+HMI_REMOTE_HMI_PATCH = (0xDB32B, b"\x00", b"\x10")
 # CDsiBinaryStream maps page 0x3005 to default key 3. Feature 0x638
 # (CID_DISPLAY_RES_1440_540) uses mask 0x07, value 3 at byte 0x45.
 HMI_CID_1440_PATCH = (0xDB4B1, b"\x09", b"\x0b")
@@ -173,6 +180,28 @@ def _hmi_coding_developer_menu_overlay(data: bytes) -> bytes:
     # Feature 0x0709 (va_ENTWICKLER_MENUE) uses mask 0x40, value 1, at
     # page 0x3006 byte 0x1c. The expected source byte is zero, so this sets
     # only that feature bit and preserves all other coding bits.
+    patched[offset : offset + len(expected)] = replacement
+    return bytes(patched)
+
+
+def _hmi_coding_remote_hmi_overlay(data: bytes) -> bytes:
+    """Code REMOTE_HMI active so the HMI starts RemotingBundle and plugin apps."""
+    page_index = 0xDB548 + (7 - 1) * 12
+    key, packed_size, data_offset = struct.unpack_from("<III", data, page_index)
+    if (key, packed_size & 0xFFFF, data_offset) != (7, 0x96, 0xDB2C0):
+        raise RuntimeError(
+            "remote-HMI coding overlay found an unexpected BMW default page index"
+        )
+
+    offset, expected, replacement = HMI_REMOTE_HMI_PATCH
+    if data[offset : offset + len(expected)] != expected:
+        raise RuntimeError(
+            f"remote-HMI coding overlay found unexpected bytes at 0x{offset:x}"
+        )
+    patched = bytearray(data)
+    # Feature 0x019a (va_REMOTE_HMI) uses mask 0x70, value 1, at page 0x3000
+    # byte 0x6b. The expected source byte is zero, so this sets only that
+    # field and leaves A4A (mask 0x80) inactive.
     patched[offset : offset + len(expected)] = replacement
     return bytes(patched)
 
@@ -433,6 +462,7 @@ def archive_rootfs(
     hmi_bench_input: bool = False,
     hmi_resource_en_us: bool = False,
     hmi_coding_developer_menu: bool = False,
+    hmi_coding_remote_hmi: bool = False,
     hmi_coding_camera_rvc: bool = False,
     hmi_variantregistry_f32: bool = False,
     cache_unchanged: bool = False,
@@ -488,6 +518,13 @@ def archive_rootfs(
         if hmi_coding_developer_menu:
             fingerprint.update(b"hmi-developer-menu-overlay\0")
             offset, expected, replacement = HMI_DEVELOPER_MENU_PATCH
+            fingerprint.update(offset.to_bytes(4, "little"))
+            fingerprint.update(len(expected).to_bytes(4, "little"))
+            fingerprint.update(expected)
+            fingerprint.update(replacement)
+        if hmi_coding_remote_hmi:
+            fingerprint.update(b"hmi-remote-hmi-overlay\0")
+            offset, expected, replacement = HMI_REMOTE_HMI_PATCH
             fingerprint.update(offset.to_bytes(4, "little"))
             fingerprint.update(len(expected).to_bytes(4, "little"))
             fingerprint.update(expected)
@@ -568,6 +605,12 @@ def archive_rootfs(
         print(f"Initializing native English resources in {HMI_RESOURCE_LIBRARY_PATH}")
     hmi_variantregistry = None
     hmi_variantregistry_data = None
+    if hmi_coding_remote_hmi and not hmi_coding_id6l:
+        # Only the ID6 Light overlay makes the HMI read BMW's built-in coding
+        # defaults, which is where the remote-HMI byte lives.
+        raise RuntimeError(
+            "remote-HMI coding requires the emulator-only ID6 Light coding profile"
+        )
     if hmi_coding_id6l or hmi_coding_developer_menu or hmi_coding_camera_rvc:
         if emulator_profile != "omap5-graphics":
             raise RuntimeError(
@@ -597,6 +640,14 @@ def archive_rootfs(
             )
             print(
                 "Applying emulator-only HMI developer-menu coding to "
+                f"{HMI_CODING_PATH} (source SHA-256 {HMI_CODING_SHA256})"
+            )
+        if hmi_coding_remote_hmi:
+            hmi_coding_library_data = _hmi_coding_remote_hmi_overlay(
+                hmi_coding_library_data
+            )
+            print(
+                "Applying emulator-only REMOTE_HMI coding (plugin apps) to "
                 f"{HMI_CODING_PATH} (source SHA-256 {HMI_CODING_SHA256})"
             )
         if hmi_coding_camera_rvc:
@@ -887,6 +938,11 @@ def main() -> int:
         help="enable the HMI developer-menu feature for its inspector service (emulator-only)",
     )
     parser.add_argument(
+        "--hmi-coding-remote-hmi",
+        action="store_true",
+        help="code REMOTE_HMI active so the HMI starts RemotingBundle and plugin apps (emulator-only)",
+    )
+    parser.add_argument(
         "--hmi-coding-camera-rvc",
         action="store_true",
         help="select the F32 reversing-camera coding required by the native camera factory (emulator-only)",
@@ -919,6 +975,7 @@ def main() -> int:
             hmi_bench_input=args.hmi_bench_input,
             hmi_resource_en_us=args.hmi_resource_en_us,
             hmi_coding_developer_menu=args.hmi_coding_developer_menu,
+            hmi_coding_remote_hmi=args.hmi_coding_remote_hmi,
             hmi_coding_camera_rvc=args.hmi_coding_camera_rvc,
             hmi_variantregistry_f32=args.hmi_variantregistry_f32,
             cache_unchanged=args.cache_unchanged,

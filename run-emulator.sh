@@ -41,6 +41,7 @@ if [[ ! "$HMI_CID_PORT" =~ ^[0-9]{1,5}$ ]] || (( 10#$HMI_CID_PORT < 1 || 10#$HMI
   exit 2
 fi
 HMI_CODING_DEVELOPER_MENU="${IDRIVE_HMI_CODING_DEVELOPER_MENU:-0}"
+HMI_CODING_REMOTE_HMI="${IDRIVE_HMI_CODING_REMOTE_HMI:-0}"
 HMI_CODING_CAMERA_RVC="${IDRIVE_HMI_CODING_CAMERA_RVC:-0}"
 HMI_VARIANTREGISTRY_F32="${IDRIVE_HMI_VARIANTREGISTRY_F32:-0}"
 QNX_HMI_WEB_INSPECTOR="${IDRIVE_QNX_HMI_WEB_INSPECTOR:-0}"
@@ -324,6 +325,17 @@ if [[ "$HMI_CODING_DEVELOPER_MENU" == "1" &&
         -n "$QEMU_LOADVM" || -z "${IDRIVE_ROOTFS_TREE:-}" ||
         "${IDRIVE_HMI_FORCE_START:-0}" != "1" ) ]]; then
   echo "IDRIVE_HMI_CODING_DEVELOPER_MENU requires a fresh direct-HMI omap5-graphics boot with a staged root." >&2
+  exit 2
+fi
+if [[ "$HMI_CODING_REMOTE_HMI" != "0" && "$HMI_CODING_REMOTE_HMI" != "1" ]]; then
+  echo "IDRIVE_HMI_CODING_REMOTE_HMI must be 0 or 1." >&2
+  exit 2
+fi
+if [[ "$HMI_CODING_REMOTE_HMI" == "1" &&
+      ( "$HMI_CODING_ID6_LIGHT" != "1" || "$EMULATOR_PROFILE" != "omap5-graphics" ||
+        -n "$QEMU_LOADVM" || -z "${IDRIVE_ROOTFS_TREE:-}" ||
+        "${IDRIVE_HMI_FORCE_START:-0}" != "1" ) ]]; then
+  echo "IDRIVE_HMI_CODING_REMOTE_HMI requires a fresh direct-HMI omap5-graphics boot with ID6 Light coding and a staged root." >&2
   exit 2
 fi
 if [[ "$HMI_CODING_CAMERA_RVC" != "0" && "$HMI_CODING_CAMERA_RVC" != "1" ]]; then
@@ -1108,6 +1120,9 @@ if [[ -n "${IDRIVE_ROOTFS_TREE:-}" && -z "$QEMU_LOADVM" ]]; then
   fi
   if [[ "$HMI_CODING_DEVELOPER_MENU" == "1" ]]; then
     ARCHIVE_PROFILE_ARGS+=(--hmi-coding-developer-menu)
+  fi
+  if [[ "$HMI_CODING_REMOTE_HMI" == "1" ]]; then
+    ARCHIVE_PROFILE_ARGS+=(--hmi-coding-remote-hmi)
   fi
   if [[ "$HMI_CODING_CAMERA_RVC" == "1" ]]; then
     ARCHIVE_PROFILE_ARGS+=(--hmi-coding-camera-rvc)

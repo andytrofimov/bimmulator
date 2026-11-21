@@ -178,6 +178,7 @@ def main() -> int:
                     (env.get("IDRIVE_HMI_CODING_CID_1440") == "1", "cid-1440x540"),
                     (env.get("IDRIVE_HMI_CODING_CID_TOUCH") == "1", "cid-touch"),
                     (env.get("IDRIVE_HMI_CODING_DEVELOPER_MENU") == "1", "developer-menu"),
+                    (env.get("IDRIVE_HMI_CODING_REMOTE_HMI") == "1", "remote-hmi"),
                     (env.get("IDRIVE_HMI_CODING_CAMERA_RVC") == "1", "f32-camera-rvc"),
                 )
                 if enabled

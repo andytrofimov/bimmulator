@@ -38,9 +38,9 @@ derives `0x9c56` from these inputs:
 
 | Derived input | Shipped coding value | Meaning |
 | --- | --- | --- |
-| `0x4e55` | VA feature `0x019a`, `va_REMOTE_HMI_nicht_aktiv` | Direct active-value check |
-| `0x4e54` | VA `0x019d`, `va_A4A_nicht_aktiv`, or `0x01a0`, `va_A4A_REMOTE_APPS_nicht_aktiv` | Either alternative enables the derived input |
-| `0x5264` | VA `0x00b2`, `va_TOUCH_COMMAND_nicht_aktiv` | Direct active-value check |
+| `0x4e55` | VA feature `0x019a`, `va_REMOTE_HMI` (value 1) | Direct active-value check |
+| `0x4e54` | VA `0x019d`, `va_A4A`, or `0x01a0`, `va_A4A_REMOTE_APPS` | Either alternative enables the derived input |
+| `0x5264` | VA `0x00b2`, `va_TOUCH_COMMAND` | Direct active-value check |
 | `0x9c55` | Any of VA `0x00f4`, `0x00f5`, `0x00f6` (`va_SPECIAL_VEHICLE`) and role 1 | Special-vehicle role path |
 
 The derived feature is true when any listed input is true. Ghidra also shows
@@ -50,6 +50,47 @@ values in V80's synthetic F32 profile. The gate is not yet tied causally to
 the empty app. V81 first captures the read-only live VariantRegistry values
 and app/scene lifecycle. Change coding only if that evidence and the exact F32
 profile value establish a needed service.
+
+### Coding descriptors and the plugin-app result (2026-11-11)
+
+An earlier revision of the table above named these features with a
+`_nicht_aktiv` suffix. The descriptor table in `libhmicoding.so` shows the
+listed ids are the active values: `0x019a` is `va_REMOTE_HMI` (value 1), while
+`0x019b` is `va_REMOTE_HMI_nicht_aktiv` (value 0) and `0x019c` the restricted
+value 2.
+
+The descriptors are 0x24-byte records in `.data` (two tables,
+`0x967cc`-`0xbb018` and `0xbb018`-`0xd9954`): u16 page at `+0x08`, u16 byte at
+`+0x0a`, u16 base at `+0x0e`, u8 mask at `+0x10`, u8 expected value at `+0x11`,
+u32 feature id at `+0x14` and the `va_...` name pointer at `+0x18`.
+`CVACoding::isCodingFeature` (`0x5222c`) tests
+`((buf[base + byte] >> ctz(mask)) & (mask >> ctz(mask))) == value`. The table
+reproduces every coding overlay already used here (ID6 Light, BAUREIHE_F32,
+language, display size, CID resolution and touch).
+
+| Feature | Page | Byte | Mask | Active value | Shipped default |
+| --- | --- | --- | --- | --- | --- |
+| `0x019a` `va_REMOTE_HMI` | `0x3000` (defaults key 7) | `0x6b` | `0x70` | 1 | 0 |
+| `0x019d` `va_A4A` | `0x3000` | `0x6b` | `0x80` | 1 | 0 |
+| `0x01a0` `va_A4A_REMOTE_APPS` | `0x3000` | `0x6c` | `0x01` | 1 | 0 |
+| `0x00b2` `va_TOUCH_COMMAND` | `0x300b` (defaults key 15) | `0x00` | `0x01` | 1 | 0 |
+
+So the synthetic F32 profile has every input of `0x9c56` false. The
+`pluginApps = true` setting (`IDRIVE_HMI_CODING_REMOTE_HMI=1`) changes file
+offset `0xdb32b` from `0x00` to `0x10`, which sets only `va_REMOTE_HMI`.
+
+Run `20261111T072222Z` (X20511I, head unit only, headless, a third-party
+plugin app staged under `/opt/hmi/ID5/data/ro/Plugins`) ties the gate to plugin
+apps. With the overlay applied, `Plugin RemotingBundle had a problem during
+startup` no longer appears in the serial log, HmiMain3D gains the threads
+`tHMI_Remoting` and `_BMW Remoting Server`, guest RAM holds the runtime-joined
+paths `/opt/hmi/data/ro//Plugins/<app>/lib<app>.so` and
+`/opt/hmi/data/ro//PluginsCoded`, and the plugin app's own log shows it loaded,
+created, initialised and subscribed to CDS. The same plugin staged without the
+overlay left no trace. HmiMain3D stayed up and kept drawing. Not established:
+whether the app-manager autostart log line itself fired (its text is a static
+string in HmiMain3D), and where a `Custom` plugin app's menu entry appears in
+the ID6 Light F32 menu; the Media/Radio source list is empty on this bench.
 
 
 ## V81 live registry and camera equipment gate
