@@ -1,0 +1,65 @@
+# Firmware-free builds and tests; no BMW images or guest boot.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m compileall -q tools tests
+      - run: python -m unittest discover -s tests -v
+
+  nix:
+    name: Linux builds, QEMU devices and Mesa EGL
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: experimental-features = nix-command flakes
+      - uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.nix', 'flake.lock', 'nix/**') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 8G
+
+      - name: Build Linux launcher, QEMUs and Mesa EGL server
+        run: |
+          nix build --print-build-logs --no-link \
+            .#qemu-omap5 .#qemu-capricorn-m .#mesa-egl-rpc-server .#idrive6
+
+      - name: Run tests with patched QEMU and Mesa EGL
+        shell: bash
+        run: |
+          export IDRIVE_QEMU="$(nix path-info .#qemu-omap5)/bin/qemu-system-arm"
+          kombi_qemu="$(nix path-info .#qemu-capricorn-m)/bin/qemu-system-mips64el"
+          export IDRIVE_TEST_EGL_SERVER="$(nix path-info .#mesa-egl-rpc-server)/bin/mesa-egl-rpc-server"
+          test -x "$IDRIVE_QEMU"
+          test -x "$kombi_qemu"
+          test -x "$IDRIVE_TEST_EGL_SERVER"
+          "$IDRIVE_QEMU" -machine help | grep -E '^omap5430[[:space:]]'
+          "$kombi_qemu" -machine help | grep -E '^capricorn-m[[:space:]]'
+          python3 -m unittest discover -s tests -v 2>&1 | tee "$RUNNER_TEMP/unittest.log"
+          if grep -Eq 'skipped .*patched QEMU|skipped .*IDRIVE_TEST_EGL_SERVER' "$RUNNER_TEMP/unittest.log"; then
+            echo 'Required QEMU or EGL tests were skipped'
+            exit 1
+          fi
